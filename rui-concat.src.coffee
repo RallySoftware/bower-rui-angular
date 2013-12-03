@@ -1,274 +1,3 @@
-angular.module('apps', [])
-
-.run( (wsapiRestSecurity) ->
-  wsapiRestSecurity.initToken()
-)
-
-.provider 'appsEnvironment', ->
-
-  environment =
-    baseUrl: 'https://test17cluster.rallydev.com/'
-    project: 3206152153
-    projectScopeUp: false
-    projectScopeDown: false
-    storyTypeOid: 41529127
-    defectTypeOid: 41529147
-
-  $get: ->
-    environment
-  setEnvironment: (environment) ->
-
-.controller 'AppCtrl', ($rootScope) ->
-  window.$rootScope = $rootScope
-
-  window.getScopeCount = (scope, scopeHash = {}) ->
-    return 0 if !scope || scopeHash[scope.$id] isnt undefined
-
-    watchCount = 0
-
-    watchCount += scope.$$watchers.length if scope.$$watchers
-    scopeHash[scope.$id] = watchCount
-
-    watchCount += getScopeCount scope.$$childHead, scopeHash
-    watchCount += getScopeCount scope.$$nextSibling, scopeHash
-
-    return watchCount
-angular.module('apps.kanban.controllers.app', [])
-
-.controller 'KanbanAppCtrl',
-  class KanbanAppCtrl
-  # controller for the app
-angular.module('apps.kanban.controllers.card', [])
-
-# .controller 'KanbanCardCtrl', ($scope) ->
-#   $scope.card.formattedId = $scope.card.FormattedID
-#   $scope.card.name = $scope.card.Name
-#   $scope.card.ownerName = $scope.card.Owner?._refObjectName;
-#   $scope.card.type = $scope.card._type.toLowerCase()
-#   $scope.card.color = $scope.card.DisplayColor if $scope.card.DisplayColor
-
-#   if $scope.card.Owner
-#     $scope.card.avatarUrl = "#{appsEnvironment.baseUrl}/slm/profile/image/#{$scope.card.Owner.ObjectID}/50.sp"
-#   else
-#     $scope.card.avatarUrl = '#{appsEnvironment.baseUrl}/slm/js-lib/rui/builds/rui/resources/themes/images/default/cardboard/no-owner.png'
-
-#   $scope.menuItems = [
-#     { icon: 'add', title: 'New...' }
-#     { icon: 'gear', title: 'Actions...' }
-#     { icon: 'ok', title: 'Mark as Ready...' }
-#     { icon: 'blocked', title: 'Block...' }
-#     { icon: 'color', title: 'Card Color...' }
-#   ]
-
-.controller 'KanbanCardCtrl',
-  class KanbanCardCtrl
-
-    @$inject = ['$scope', '$attrs', 'appsEnvironment']
-    constructor: ($scope, $attrs, appsEnvironment) ->
-
-      @card = $scope.$eval($attrs.ngModel)
-      @column = $scope.$eval($attrs.column)
-
-      @card.formattedId = @card.FormattedID
-      @card.name = @card.Name
-      @card.ownerName = @card.Owner?._refObjectName;
-      @card.type = @card._type.toLowerCase()
-      @card.color = @card.DisplayColor if @card.DisplayColor
-      @card.displayFields = @column.displayFields
-
-      if @card.Owner
-        @card.avatarUrl = "#{appsEnvironment.baseUrl}slm/profile/image/#{@card.Owner.ObjectID}/50.sp"
-      else
-        @card.avatarUrl = "#{appsEnvironment.baseUrl}slm/js-lib/rui/builds/rui/resources/themes/images/default/cardboard/no-owner.png"
-
-angular.module('apps.kanban.controllers.cardboard', [])
-
-.controller 'KanbanCardboardCtrl',
-  class KanbanCardboardCtrl
-
-    ready: false
-
-    @$inject = ['$scope', '$timeout', '$resource', 'wsapiRestSort', 'PubSub', 'rui.metrics.messages']
-    constructor: ($scope, $timeout, $resource, wsapiRestSort, PubSub, ruiMetricsMessages) ->
-      @cmp = {$className: 'KanbanCardboardCtrl'}
-      @loadedColumns = 0
-
-      PubSub.publish(ruiMetricsMessages.loadBegin, {component: @cmp, description: 'Angular Cardboard loading'})
-
-      @columns = [
-        {
-          "title": "On Deck",
-          "scheduleState": "",
-          "id": 0,
-          "wip": 0
-        },
-        {
-          "title": "Ready To Pull",
-          "scheduleState": "",
-          "id": 1,
-          "wip": 5
-        },
-        {
-          "title": "Test Planning",
-          "scheduleState": "",
-          "id": 5,
-          "wip": 2
-        },
-        {
-          "title": "In Dev",
-          "scheduleState": "",
-          "id": 2,
-          "wip": 3
-        },
-        {
-          "title": "Accepted",
-          "scheduleState": "",
-          "id": 3,
-          "wip": 0
-        },
-        {
-          "title": "Released",
-          "scheduleState": "",
-          "id": 4,
-          "wip": 0
-        }
-      ]
-      # @columns = Column = $resource('api/columns.json', {}).query {}, =>
-      #   @ready = true
-
-      $scope.$on 'columnrendered', (event, column) =>
-        @loadedColumns++
-
-        console.log "#{column.title}: rendered"
-        PubSub.publish ruiMetricsMessages.loadEnd, {component: @cmp} if @loadedColumns is @columns.length
-
-      @sortableOptions = wsapiRestSort.sortableOptions
-module = angular.module('apps.kanban.controllers.column', [
-  'rui.metrics.messages'
-])
-
-module.controller 'KanbanColumnCtrl',
-  class KanbanColumnCtrl
-
-    @$inject = ['$scope', '$attrs', 'kanbanColumnService', 'PubSub', 'wsapi.metrics.messages']
-    constructor: (@$scope, @$attrs, @kanbanColumnService, @PubSub, @wsapiMetricsMessages) ->
-      @cmp = {$className: 'KanbanColumnCtrl'}
-
-      @PubSub.publish(@wsapiMetricsMessages.loadBegin, {component: @cmp, description: 'Angular Column loading'})
-      @cardsRendered = 0
-
-      column = $scope.$eval(@$attrs.ngModel)
-      @cards = []
-      @column = column
-      @displayFields = ['name']
-
-      kanbanColumnService.getColumn(column.title).then (cards) =>
-        
-        # console.log 'KanbanColumnCtrl', cards
-        @cards = cards
-        @cards.column = @column
-
-        @columnRendered() if @cards.length is 0
-        @$scope.$on 'cardrendered', (event, card) =>
-          @cardsRendered++
-
-          console.log "#{card.formattedId}: rendered"
-          @columnRendered()
-
-    columnRendered: ->
-      @PubSub.publish(@wsapiMetricsMessages.loadEnd, {component: @cmp})
-      @$scope.$emit 'columnrendered', @column if @cardsRendered is @cards.length
-
-# .controller 'KanbanColumnCtrl', ($scope, $attrs, kanbanColumnService) ->
-#   $scope.cards = []
-
-#   kanbanColumnService.getColumn($scope.$eval($attrs.column).title).then (cards) ->
-#     console.log 'KanbanColumnCtrl', cards
-#     $scope.cards = cards
-angular.module('apps.kanban', [
-  'apps'
-  'apps.templates'
-  'rui.cardboard'
-  'rui.quickmenu'
-  'apps.kanban.controllers.app'
-  'apps.kanban.controllers.cardboard'
-  'apps.kanban.controllers.column'
-  'apps.kanban.controllers.card'
-  'apps.kanban.services.column'
-  'wsapi.rest.artifact'
-  'wsapi.rest.sort'
-  'rui.sortable'
-  'ui.sortable'
-])
-
-angular.module('apps.kanban.services.column', [
-  'wsapi.metrics.messages'
-  'rui.pubsub'
-])
-
-.service 'kanbanColumnService',
-  class KanbanColumnService
-
-    fast = false
-    cachedColumns: {}
-    
-    className: 'kanbanColumnService'
-
-    @$inject = ['$q', 'wsapiRestArtifact', 'appsEnvironment', 'PubSub', 'wsapi.metrics.messages']
-    constructor: (@$q, @wsapiRestArtifact, @appsEnvironment, @PubSub, @wsapiMetricsMessages) ->
-      @types = []
-
-    setTypes: (@types) ->
-
-    getColumns: ->
-      options = {requester: {$className: 'kanbanColumnService'}, component: {$className: 'kanbanColumnService'}}
-      return @columns.promise if @columns
-      @columns = @$q.defer()
-
-      Columns = @wsapiRestArtifact
-        pagesize: 200
-        types: 'HierarchicalRequirement,Defect'
-        order: 'DragAndDropRank ASC,ObjectID'
-        fetch: "DragAndDropRank,c_KanbanState,ObjectID,Project,Workspace,RevisionHistory,CreationDate,Name,Discussion:summary,LatestDiscussionAgeInMinutes,Defects:summary[State;Owner],DefectStatus,FormattedID,Owner,BlockedReason,PlanEstimate,PortfolioItem,Blocked,Ready,Tags,DisplayColor"
-        query: "((((TypeDefOid = #{@appsEnvironment.storyTypeOid}) AND (c_KanbanState != \"\")) AND (DirectChildrenCount = 0)) OR ((TypeDefOid = #{@appsEnvironment.defectTypeOid}) AND (c_KanbanState != \"\")))"
-
-
-      @PubSub.publish(@wsapiMetricsMessages.dataBegin, {}, options)
-      Columns.query (response) =>
-        @PubSub.publish(@wsapiMetricsMessages.dataEnd, {}, response, options)
-        # console.log response
-        @columns.resolve response.QueryResult.Results
-      # @columns.resolve []
-
-      return @columns.promise
-
-    getColumn: (type) ->
-      options = {requester: {$className: 'kanbanColumnService'}, component: {$className: 'kanbanColumnService'}}
-      if fast
-        @getColumns().then (columns) ->
-          _.filter columns, (column) ->
-            column.c_KanbanState is type
-      else
-        deferred = @$q.defer()
-        if @cachedColumns[type]
-          deferred.resolve @cachedColumns[type]
-        else
-          Column = @wsapiRestArtifact
-            types: 'HierarchicalRequirement,Defect'
-            order: 'DragAndDropRank ASC,ObjectID'
-            fetch: "DragAndDropRank,c_KanbanState,ObjectID,Project,Workspace,RevisionHistory,CreationDate,Name,Discussion:summary,LatestDiscussionAgeInMinutes,Defects:summary[State;Owner],DefectStatus,FormattedID,Owner,BlockedReason,PlanEstimate,PortfolioItem,Blocked,Ready,Tags,DisplayColor"
-            query: "((((TypeDefOid = #{@appsEnvironment.storyTypeOid}) AND (c_KanbanState = \"#{type}\")) AND (DirectChildrenCount = 0)) OR ((TypeDefOid = #{@appsEnvironment.defectTypeOid}) AND (c_KanbanState = \"#{type}\")))"
-
-          @PubSub.publish(@wsapiMetricsMessages.dataBegin, {}, options)
-          Column.query (response) =>
-            @PubSub.publish(@wsapiMetricsMessages.dataEnd, {}, response, options)
-            console.log response
-            @cachedColumns[type] = response.QueryResult.Results
-            deferred.resolve @cachedColumns[type]
-
-        return deferred.promise
-
-angular.module 'apps.templates', []
 cardboard = angular.module 'rui.cardboard', [
   'rui.templates'
   'rui.cardboard.directives.cardboard'
@@ -817,6 +546,67 @@ angular.module('rui.highcharts.directives.controllers.html', [])
     constructor: (@$scope) ->
       @$scope.$highchartsHtml = @$scope.$new()
 
+# angular.module('rui.highcharts.directives.controllers.metric', [])
+
+# .controller 'MetricCtrl',
+#   class MetricCtrl
+
+#     modes:
+#       raw: 
+#         name: 'raw'
+#         series: 0
+#       scores: 
+#         name: 'scores'
+#         series: 1
+
+#     @$inject = ['$scope']
+#     constructor: ($scope) ->
+#       @$scope.highcharts = null
+#       @$scope.mode = @modes.scores.name
+
+#       @$scope.$watch('mode', (mode) =>
+#         @setMode(mode)
+#       )
+
+#       @$scope.$watch('highcharts', =>
+#         @setMode($scope.mode)
+#       )
+
+#     setMode: (mode) ->
+#       for i,series in @$scope.highcharts.series
+#          if @modes[mode].series is i then series.show() else series.hide()
+
+#     ###
+#     @param {element}
+#     @param {options} Highcharts configuration object
+#     @public
+#     ###
+#     initHighcharts: (element, options) ->
+#       @highcharts = new @Highcharts(options)
+#       return @highcharts
+
+#     renderHtml: (html, x, y) ->
+#       @highcharts.on('load' () =>
+#         @highcharts.renderer.html(html, x, y)
+#       )
+
+angular.module('rui.highcharts.directives.controllers.toggle', [])
+
+.controller 'ToggleCtrl',
+  class ToggleCtrl
+
+    @$inject = ['$scope']
+    constructor: (@$scope) ->
+    	debugger
+    	@toggleTest = 'test'
+    	@$scope.$watch('state', (state) =>
+    		switch state
+    			when 'scores' then @$scope.$highcharts.chart.series[0].hide()
+    			when 'metric' then @$scope.$highcharts.chart.series[0].hide()    		
+    	)
+
+    toggleIt: () =>
+    	debugger
 ###*
  * @ngdoc directive
  * @name rui.highcharts.directives:ruiHighcharts
@@ -1490,140 +1280,3 @@ transclude = angular.module 'rui.util.transclude', [
 util = angular.module 'rui.util', [
   'rui.util.transclude'
 ]
-
-angular.module('wsapi.metrics.messages', [])
-
-.value 'wsapi.metrics.messages',
-
-  ###
-   * @event start a new client metrics aggregator session  which will flush current metrics queue
-   * @param {String} status The status to set all pending events before starting the new session
-   * @param {Object} [defaultParams] default parameters to append to all client metric events for this session
-  ###
-  startSession: 'rally.clientmetrics.message.startsession'
-
-  ###
-   * @event action published whenever a component has changed state in some way (such as a button click
-   * or the user has selected a different value in a combobox). This is a synchronous client metrics event
-   * @param {Object} component The component that received the action (for example, the button or combobox)
-   * @param {Object} [options] additional parameters to pass along with the message
-   * @param {String} [options.description] description of what took place. For example: "Add New Button click" 
-   * @param {Object} [options.miscData] an object of key/value pairs that will be sent along with this action
-   * @param {Number} [options.startTime] the timestamp at which this action occured, only needed to be provided in special cases
-  ###
-  action: 'rally.clientmetrics.message.action'
-
-  ###
-   * @event loadBegin published whenever a component has began an asynchronous load
-   * @param {Object} component The component that has began loading (for example a grid, panel, page, etc)
-   * @param {Object} [options] additional parameters to pass along with the message
-   * @param {String} [options.description] description of what took place. For example: "reload due to timebox filter change"
-   * @param {Object} [options.miscData] an object of key/value pairs that will be sent along with this loadBegin
-   * @param {Number} [options.startTime] the timestamp at which this action occured, only needed to be provided in special cases
-  ###
-  loadBegin: 'rally.clientmetrics.message.loadbegin'
-
-  ###
-   * @event loadEnd published whenever a component has finished its load as indicated by
-   * a previous loadBegin message
-   * @param {Object} component The component that has finished loading (for example a grid, panel, page, etc)
-  ###
-  loadEnd: 'rally.clientmetrics.message.loadend'
-
-  ###
-   * @event error published whenever an unhandled error has been detected, typically by {@link Rally.clientmetrics.ErrorListener}
-   * @param {String} info Any info that can be gleaned from the error (stack trace, message, anything that is available)
-  ###
-  error: 'rally.clientmetrics.message.error'
-
-  dataBegin: 'rally.clientmetrics.message.dataBegin'
-  dataEnd: 'rally.clientmetrics.message.dataEnd'
-angular.module('wsapi.rest.artifact', [
-  'ngResource'
-  'wsapi.rest.security'
-])
-
-.factory 'wsapiRestArtifact', ($resource, appsEnvironment, wsapiRestSecurity) ->
-
-  (defaultParams) ->
-
-    $resource("#{appsEnvironment.baseUrl}slm/webservice/v2.x/:type/:id", angular.extend(
-        type: 'artifact'
-        project: "/project/#{appsEnvironment.project}"
-        projectScopeUp: appsEnvironment.projectScopeUp
-        projectScopeDown: appsEnvironment.projectScopeDown
-        jsonp:'JSON_CALLBACK'
-      , defaultParams)
-    ,
-      query:
-        method: 'JSONP'
-      post:
-        method: 'JSONP'
-        params:
-          key: wsapiRestSecurity.getToken()
-          _method: 'POST'
-    )
-angular.module('wsapi.rest.security', [])
-
-.service 'wsapiRestSecurity',
-  class wsapiRestSecurity
-
-    token: ''
-
-    @$inject = ['$http', 'appsEnvironment']
-    constructor: (@$http, @appsEnvironment) ->
-
-    getToken: ->
-      @token
-
-    initToken: ->
-      @token = angular.element('meta[name=SecurityToken]').attr('content');
-      if not @token
-        @$http(
-          url: "#{@appsEnvironment.baseUrl}slm/webservice/v2.x/security/authorize"
-          method: 'JSONP'
-          params:
-            jsonp: 'JSON_CALLBACK'
-        ).then (response) =>
-          @token = response.data.OperationResult.SecurityToken
-angular.module('wsapi.rest.sort', [
-  'wsapi.rest.artifact'
-])
-
-.service 'wsapiRestSort',
-  class wsapiRestSort
-
-    @$inject = ['wsapiRestArtifact']
-    constructor: (@wsapiRestArtifact, @wsapiRestSecurity) ->
-      @sortableOptions =
-        connectWith: '.column-content'
-        placeholder: 'card-placeholder'
-        stop: @stop
-
-    stop: (event, ui) =>
-
-      index = ui.item.sortable.endIndex
-      return if index is undefined
-
-      modelValue = ui.item.sortable.endModel.$modelValue
-      card = modelValue[index]
-
-      if index > 0
-        rankDir = -1
-        rankStr = 'rankBelow'
-      else
-        rankDir = 1
-        rankStr = 'rankAbove'
-      rankCard = modelValue[index + rankDir]
-
-      artifact = {}
-      artifact[card._type] = c_KanbanState: modelValue.column.title
-      config =
-        type: card._type
-        id: card.ObjectID
-        artifact: artifact
-      config[rankStr] = "#{rankCard.type}/#{rankCard.ObjectID}" if rankCard
-
-      Artifact = @wsapiRestArtifact()
-
-      Artifact.post config
