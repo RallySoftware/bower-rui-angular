@@ -2,17 +2,22 @@ angular.module('rui.templates').run(['$templateCache', function($templateCache) 
   'use strict';
 
   $templateCache.put('rui/cardboard/template/rui-card.html',
-    "<div class=rui-card><div class=card-color></div><div class=card-content><span aria-hidden=true class=\"picto icon-defect\" ng-if=\"model.type == 'defect'\"></span><div class=avatar><img class=small ng-src=\"{{ model.avatarUrl }}\"></div><div class=card-owner>{{ model.ownerName }}</div><div class=card-id>{{ model.formattedId }}</div><div class=card-field ng-repeat=\"field in model.fields\">{{ field.value }}</div><div ng-transclude=\"\"></div></div></div>"
+    "<div class=rui-cardboard-card><div class=card-color ng-style=\"{backgroundColor: $card.color}\"></div><div class=card-content ng-transclude=\"\"></div></div>"
+  );
+
+
+  $templateCache.put('rui/cardboard/template/rui-cardboard.html',
+    "<div class=rui-cardboard ng-transclude=\"\"></div>"
   );
 
 
   $templateCache.put('rui/cardboard/template/rui-column-scrollbars.html',
-    "<i class=\"picto icon-small-chevron-left scroll left\" ng-show=model.canScrollLeft ng-click=model.scrollLeft()></i><i class=\"picto icon-small-chevron-right scroll right\" ng-show=model.canScrollRight ng-click=model.scrollRight()></i>"
+    "<i class=\"picto icon-small-chevron-left scroll left\" ng-show=model.canScrollLeft ng-click=model.scrollLeft()></i> <i class=\"picto icon-small-chevron-right scroll right\" ng-show=model.canScrollRight ng-click=model.scrollRight()></i>"
   );
 
 
   $templateCache.put('rui/cardboard/template/rui-column.html',
-    "<div class=rui-column ng-style=\"{width: width}\"></div>"
+    "<div class=rui-cardboard-column ng-style=\"{width: width}\" ng-transclude=\"\"></div>"
   );
 
 
