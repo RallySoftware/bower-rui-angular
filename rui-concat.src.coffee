@@ -7,9 +7,21 @@ cardboard = angular.module 'rui.cardboard', [
   'rui.cardboard.directives.columnscrollbars'
   'rui.cardboard.filters.wip'
 ]
-angular.module('rui.cardboard.controllers.cardboard', [])
+module = angular.module('rui.cardboard.controllers.card', [])
 
-.controller 'rui.cardboard.controllers.cardboard',
+module.controller 'rui.cardboard.controllers.card',
+  class CardCtrl
+
+    @$inject = ['$scope', '$attrs']
+    constructor: (@$scope, $attrs) ->
+      @$card = @$scope.$card = @$scope.$new()
+
+      if $attrs.ruiCardColor
+        $attrs.$observe 'ruiCardColor', (color) =>
+          @$card.color = color
+module = angular.module('rui.cardboard.controllers.cardboard', [])
+
+module.controller 'rui.cardboard.controllers.cardboard',
   class CardboardCtrl
 
     @$inject = ['$timeout']
@@ -17,20 +29,20 @@ angular.module('rui.cardboard.controllers.cardboard', [])
       @columns = []
       @columnWidth = 0
 
-    ###
-
-    @private
-    ###
     _adjustColumns: ->
       @columnWidth = (100 / @columns.length)
       angular.forEach @columns, (column) =>
         column.width = "#{@columnWidth}%"
 
     
-    # ruiCardboard controller API
-    ###
-    @param {scope} column
-    @public
+    ###*
+    * @ngdoc function
+    * @name rui.cardboard.controllers.cardboard#addColumn
+    * @methodOf rui.cardboard.directives:ruiCardboard
+    * @param {Object} scope The column's scope
+    * @description
+    * This should be called by a column within a cardboard. This method will tie a column and cardboard together.
+    * This method will eventually coordinate the width of each column within the cardboard
     ###
     addColumn: (column) ->
       @columns.push column
@@ -41,25 +53,51 @@ angular.module('rui.cardboard.controllers.cardboard', [])
       @$timeout.cancel @adjustTimer if @adjustTimer
       @adjustTimer = @$timeout => @_adjustColumns()
 
-    ###
-    @param {scope} column
-    @public
+    ###*
+    * @ngdoc function
+    * @name rui.cardboard.controllers.cardboard#removeColumn
+    * @methodOf rui.cardboard.directives:ruiCardboard
+    * @param {Object} scope The column's scope
+    * @description
+    * This should be called by a column within a cardboard. This method will remove the column from the columns
+    * tracked by the cardboard.
+    * This method will eventually coordinate the width of each column within the cardboard
     ###
     removeColumn: (column) ->
       @columns = _.filter @columns, (col) -> col isnt column
-angular.module('rui.cardboard.controllers.column', [])
+      
+      # set up the timer to adjust the header height
+      # the following code is to debounce
+      @$timeout.cancel @adjustTimer if @adjustTimer
+      @adjustTimer = @$timeout => @_adjustColumns()
+module = angular.module 'rui.cardboard.controllers.column', []
 
-.controller 'rui.cardboard.controllers.column',
+module.controller 'rui.cardboard.controllers.column',
   class ColumnCtrl
 
-    @$inject = ['$scope']
-    constructor: (@$scope) ->
+    constructor: ->
 
-    # ruiColumn controller API
+    ###*
+    * @ngdoc function
+    * @name rui.cardboard.controllers.column#addCard
+    * @methodOf rui.cardboard.directives:ruiColumn
+    * @param {Object} scope The card's scope
+    * @description
+    * This should be called by a card within a column when a card is rendered. This method will tie a card and column together
+    ###
     addCard: (card) ->
       card.column = @
 
-    removeCard: ->
+    ###*
+    * @ngdoc function
+    * @name rui.cardboard.controllers.column#removeCard
+    * @methodOf rui.cardboard.directives:ruiColumn
+    * @param {Object} scope The card's scope
+    * @description
+    * This should be called by a card within a column when a card is removed
+    ###
+    removeCard: (card) ->
+
 angular.module('rui.cardboard.controllers.columnscrollable', [])
 
 .controller 'rui.cardboard.controllers.columnscrollable',
@@ -94,15 +132,23 @@ angular.module('rui.cardboard.controllers.columnscrollable', [])
       @scrollableColumns = [].concat @columns # make a copy
       @scrollColumns()
     
-    ###
-    @public
+    ###*
+    * @ngdoc function
+    * @name rui.cardboard.controllers.columnscrollable#scrollRight
+    * @methodOf rui.cardboard.directives:ruiColumnScrollable
+    * @description
+    * This method will scroll the visible columns to the right
     ###
     scrollRight: =>
       @currentIndex++
       @scrollColumns()
 
-    ###
-    @public
+    ###*
+    * @ngdoc function
+    * @name rui.cardboard.controllers.columnscrollable#scrollLeft
+    * @methodOf rui.cardboard.directives:ruiColumnScrollable
+    * @description
+    * This method will scroll the visible columns to the left
     ###
     scrollLeft: =>
       @currentIndex--
@@ -128,138 +174,174 @@ angular.module('rui.cardboard.controllers.columnscrollable', [])
           column.canScrollRight = false
 
         return true
-card = angular.module('rui.cardboard.directives.card', [
+module = angular.module('rui.cardboard.directives.card', [
   'rui.cardboard.directives.column'
-  'rui.cardboard.directives.cardboard'
+  'rui.cardboard.controllers.card'
 ])
 
 ###*
 * @ngdoc directive
 * @name rui.cardboard.directives:ruiCard
+* @restrict EA
+* @param {string} ngModel An object on the current scope that should be managed by this directive
+* @param {expression=} ruiCardColor An angular expression that represents a color
 * @description
-* This is the ruiCard directive. It is meant to go in the column-content section of an ruiColumn
+* This component is meant to go in the column-content section of an {@link api/rui.cardboard.directives:ruiColumn ruiColumn}
+* This component will add a new scope represented by `$card`
+*
+* @example
+  <example module="App">
+    <file name="script.js">
+      angular.module('App', ['rui.cardboard'])
+      .controller('Ctrl',
+        function Ctrl($scope) {
+          $scope.card = {
+            avatarUrl: 'https://www.tomtom.com/en_gb/images/homer_morevoices_tcm131-16571.gif',
+            name: 'Card 1',
+            ownerName: 'Bart',
+            formattedId: 'US123'
+          };
+        }
+      );
+    </file>
+    <file name="index.html">
+      <div ng-controller="Ctrl">
+        <rui-card ng-model="card" rui-card-color="red">
+          <div class="avatar">
+            <img class="small" ng-src="{{ card.avatarUrl }}"/>
+          </div>
+          <div class="card-owner">{{ card.ownerName }}</div>
+          <div class="card-id">
+            <span class="icon icon-story" class="icon-story"></span>
+            {{ card.formattedId }}
+          </div>
+          <div class="card-field">{{ card.name }}</div>
+        </rui-card>
+      </div>
+    </file>
+  </example>
 ###
-card.directive 'ruiCard', ->
+module.directive 'ruiCard', ->
   restrict: 'EA'
   transclude: true
   replace: true
-  require: ['^ruiCardboard', '^ruiColumn', 'ngModel']
+  require: ['ngModel', '^?ruiColumn']
   templateUrl: 'rui/cardboard/template/rui-card.html'
 
-  compile: (tElement, tAttrs, transcludeFn) ->
+  controller: 'rui.cardboard.controllers.card'
 
-    (scope, element, attrs, controllers) ->
-      [cardboardCtrl, columnCtrl, model] = controllers
+  compile: (tElement, tAttrs, transcludeFn) ->
+    (scope, element, attrs, [ngModel, columnCtrl]) ->
 
       card = scope.$eval(attrs.ngModel)
-      scope.model = card
 
-      card.fields = _.map card.displayFields, (displayField) ->
-        if card[displayField] isnt undefined
-          field =
-            name: displayField
-            value: scope.model[displayField]
-
-      # card color
-      if attrs.color
-        # element.find('.card-color').css 'background-color', attrs.color
-        scope.$watch attrs.color, (newValue, oldValue) ->
-          element.find('.card-color').css 'background-color', newValue
-
-      columnCtrl.addCard scope
+      columnCtrl?.addCard card
       scope.$emit 'cardrendered', card
+
+      # notify the cardboard when a column is removed
+      element.on '$destroy', ->
+        columnCtrl?.removeCard card
 
 cardboard = angular.module('rui.cardboard.directives.cardboard', [
   'rui.cardboard.controllers.cardboard'
 ])
 
 ###*
- * @ngdoc directive
- * @name rui.cardboard.directive:ruiCardboard
- * @description
- * The parent cardboard directive - it coordinates column and card directives
- * @example
-    <example module="App">
-      <file name="script.js">
-        angular.module('App', ['rui.cardboard', 'rui.sortable'])
-        .controller('Ctrl',
-          function Ctrl($scope) {
-            $scope.columns = [
-              {
-                title: "On Deck",
-                wip: 2,
-                cards: [
-                  {
-                    formattedId: 'DE23',
-                    type: 'defect',
-                    name: 'Card 1',
-                    ownerName: 'Homer',
-                    avatarUrl: 'https://www.tomtom.com/en_gb/images/homer_morevoices_tcm131-16571.gif'
-                  }
-                ]
-              },
-              {
-                title: "Ready To Pull",
-                wip: 1,
-                cards: [
-                  {
-                    formattedId: 'US123',
-                    type: 'userstory',
-                    name: 'Card 2',
-                    ownerName: 'Bart',
-                    color: '#00A9E0',
-                    avatarUrl: 'http://images3.wikia.nocookie.net/__cb20100530014758/lossimpson/es/images/thumb/6/65/Bart_Simpson.png/170px-Bart_Simpson.png'
-                  }
-                ]
-              },
-              {
-                title: "In Progress",
-                wip: 1,
-                cards: []
-              },
-              {
-                title: "Testing",
-                wip: 1,
-                cards: []
-              }
-            ];
-
-            $scope.scrollOptions = {
-              connectWith: '.column-content',
-              placeholder: 'card-placeholder'
+* @ngdoc directive
+* @name rui.cardboard.directives:ruiCardboard
+* @restrict EA
+* @description
+* The parent cardboard directive - it coordinates column and card directives
+* @example
+  <example module="App">
+    <file name="script.js">
+      angular.module('App', ['rui.cardboard', 'rui.sortable'])
+      .controller('Ctrl',
+        function Ctrl($scope) {
+          $scope.columns = [
+            {
+              title: "On Deck",
+              wip: 2,
+              cards: [
+                {
+                  formattedId: 'DE23',
+                  type: 'defect',
+                  name: 'Card 1',
+                  ownerName: 'Homer',
+                  avatarUrl: 'https://www.tomtom.com/en_gb/images/homer_morevoices_tcm131-16571.gif'
+                }
+              ]
+            },
+            {
+              title: "Ready To Pull",
+              wip: 1,
+              cards: [
+                {
+                  formattedId: 'US123',
+                  type: 'story',
+                  name: 'Card 2',
+                  ownerName: 'Bart',
+                  color: '#00A9E0',
+                  avatarUrl: 'http://images3.wikia.nocookie.net/__cb20100530014758/lossimpson/es/images/thumb/6/65/Bart_Simpson.png/170px-Bart_Simpson.png'
+                }
+              ]
+            },
+            {
+              title: "In Progress",
+              wip: 1,
+              cards: []
+            },
+            {
+              title: "Testing",
+              wip: 1,
+              cards: []
             }
+          ];
+
+          $scope.scrollOptions = {
+            connectWith: '.column-content',
+            placeholder: 'card-placeholder'
           }
-        );
-      </file>
-      <file name="index.html">
-        <div ng-controller="Ctrl">
-          <rui-cardboard>
-            <rui-column ng-repeat="column in columns" ng-model="column" rui-column-scrollable="columns" num-columns="3" ng-class="{'over-capacity': column.wip > 0 && column.cards.length > column.wip}">
-              <div class="column-header">
-                <div rui-column-scrollbars ng-model="column"></div>
-                <h3 class="title">{{column.title}}</h3>
-                <div class="wip">{{column.cards.length}} of {{column.wip | wip}}</div>
-              </div>
-              <div class="column-content" rui-sortable="scrollOptions" ng-model="column.cards">
-                <rui-card ng-repeat="card in column.cards" color="card.color" ng-model="card">
-                  <div class="card-field">{{card.name}}</div>
-                </rui-card>
-              </div>
-            </rui-column>
-          </rui-cardboard>
-        </div>
-      </file>
-    </example>
+        }
+      );
+    </file>
+    <file name="index.html">
+      <div ng-controller="Ctrl">
+        <rui-cardboard>
+          <rui-column ng-repeat="column in columns" ng-model="column" rui-column-scrollable="columns" num-columns="3" ng-class="{'over-capacity': column.wip > 0 && column.cards.length > column.wip}">
+            <div class="column-header">
+              <div rui-column-scrollbars ng-model="column"></div>
+              <h3 class="title">{{column.title}}</h3>
+              <div class="wip">{{column.cards.length}} of {{column.wip | wip}}</div>
+            </div>
+            <div class="column-content" rui-sortable="scrollOptions" ng-model="column.cards">
+              <rui-card ng-repeat="card in column.cards" color="card.color" ng-model="card">
+                <div class="avatar">
+                  <img class="small" ng-src="{{ card.avatarUrl }}"/>
+                </div>
+                <div class="card-owner">{{ card.ownerName }}</div>
+                <div class="card-id">
+                  <span class="icon icon-story" ng-class="'icon-'+card.type"></span>
+                  {{ card.formattedId }}
+                </div>
+                <div class="card-field">{{card.name}}</div>
+              </rui-card>
+            </div>
+          </rui-column>
+        </rui-cardboard>
+      </div>
+    </file>
+  </example>
 ###
 cardboard.directive 'ruiCardboard', ->
   restrict: 'EA'
-  
+  transclude: true
+  replace: true
   controller: 'rui.cardboard.controllers.cardboard'
+  templateUrl: 'rui/cardboard/template/rui-cardboard.html'
 
   compile: (tElement, tAttrs) ->
-    tElement.addClass 'rui-cardboard'
     (scope, element, attrs, controller) ->
-      # console.log 'CardboardCtrl', controller
 
 column = angular.module('rui.cardboard.directives.column', [
   'rui.cardboard.controllers.column'
@@ -267,46 +349,76 @@ column = angular.module('rui.cardboard.directives.column', [
 ])
 
 ###*
- * @ngdoc directive
- * @name rui.cardboard.directive:ruiColumn
- * @description
- * The column directive adds a column
+* @ngdoc directive
+* @name rui.cardboard.directives:ruiColumn
+* @param {string} ngModel An object on the current scope that should be managed by this directive
+* @restrict EA
+* @description
+* The column directive adds a column
+* @example
+  <example module="App">
+    <file name="script.js">
+      angular.module('App', ['rui.cardboard', 'rui.sortable'])
+      .controller('Ctrl',
+        function Ctrl($scope) {
+          $scope.column = {
+            title: 'Column Title',
+            wip: 1
+          };
+        }
+      );
+    </file>
+    <file name="index.html">
+      <div ng-controller="Ctrl">
+        <rui-cardboard><!-- a column is meant to be in a cardboard -->
+          <rui-column ng-model="column">
+            <div class="column-header">
+              <h3 class="title">{{ column.title }}</h3>
+              <div class="wip">0 of {{ column.wip }}</div>
+            </div>
+            <div class="column-content">
+              <!-- cards go here -->
+            </div>
+          </rui-column>
+        </rui-cardboard>
+      </div>
+    </file>
+  </example>
 ###
 column.directive 'ruiColumn', ->
   restrict: 'EA'
   transclude: true
-  require: ['^ruiCardboard', 'ngModel']
+  require: ['ngModel', '^?ruiCardboard']
   replace: true
   templateUrl: 'rui/cardboard/template/rui-column.html'
 
   controller: 'rui.cardboard.controllers.column'
 
   compile: (tElement, tAttr, transcludeFn) ->
-    (scope, element, attrs, controllers) ->
-      [cardboardCtrl, model] = controllers
-      scope.model = scope.$eval attrs.ngModel
+    (scope, element, attrs, [ngModel, cardboardCtrl]) ->
+      column = scope.$eval attrs.ngModel
       
       # notify the cardboard when a column is added
-      cardboardCtrl.addColumn scope
+      cardboardCtrl?.addColumn column
 
       # notify the cardboard when a column is removed
       element.on '$destroy', ->
-        cardboardCtrl.removeColumn scope
+        cardboardCtrl?.removeColumn column
 
-      transcludeFn scope, (clone) ->
-        element.append clone
-
-columnscrollable = angular.module('rui.cardboard.directives.columnscrollable', [
+module = angular.module('rui.cardboard.directives.columnscrollable', [
   'rui.cardboard.controllers.columnscrollable'
 ])
 
 ###*
 * @ngdoc directive
 * @name rui.cardboard.directives:ruiColumnScrollable
+* @restrict A
+* @param {string} ngModel An array variable on the current scope that should be managed by this directive
 * @description
-* This directive allows an ruiColumn directive to become scrollable if there are too many columns to display
+* This directive allows an {@link api/rui.cardboard.directives:ruiColumn ruiColumn} directive to
+*   become scrollable if there are too many columns to display
 ###
-columnscrollable.directive 'ruiColumnScrollable', () ->
+module.directive 'ruiColumnScrollable', () ->
   restrict: 'A'
   
   ###
@@ -324,9 +436,11 @@ columnscrollbars = angular.module('rui.cardboard.directives.columnscrollbars', [
 ###*
 * @ngdoc directive
 * @name rui.cardboard.directives:ruiColumnScrollbars
+* @restrict A
 * @description
 * This directive is a simple component to show scrollbars.
-* It is meant to be used with the ruiColumnScrollable directive. It should be used in the content-header of an ruiColumn
+* It is meant to be used with the {@link rui.cardboard.directives:ruiColumnScrollable ruiColumnScrollable}
+*   directive. It should be used in the content-header of an {@link api/rui.cardboard.directives:ruiColumn ruiColumn}
 ###
 columnscrollbars.directive 'ruiColumnScrollbars', ->
   restrict: 'A'
@@ -790,103 +904,199 @@ rui = angular.module 'rui', [
 	'rui.dropdown'
 	'rui.tabs'
 	'rui.util'
+	'rui.scroll'
 ]
-angular.module("rui.sortable", [])
 
-.value("ruiSortableConfig", {})
+angular.module('rui.scroll', ['rui.scroll.when'])
 
-.directive "ruiSortable", (ruiSortableConfig) ->
+angular.module('rui.scroll.when.directives.when', []).directive('ruiScrollWhen', ($timeout) ->
+	return {
+		restrict: 'A'
+		scope:
+			ruiScrollWhen: '='
+		link: ($scope, $element, $attrs) ->
+			$scope.$watch('ruiScrollWhen', (value)->
+				if value 
+					$timeout(()-> angular.element($element?[0])?.scrollIntoView())
+			)
+	}
+)
+
+angular.module('rui.scroll.when', ['rui.scroll.when.directives.when'])
+
+#
+# jQuery UI Sortable plugin wrapper
+#
+# @param [ui-sortable] {object} Options to pass to $.fn.sortable() merged onto ui.config
+#
+module = angular.module("rui.sortable", [])
+
+module.value("ruiSortableConfig", {})
+
+###*
+* @ngdoc directive
+* @name rui.sortable:ruiSortable
+* @restrict A
+* @param {string} ruiSortable An object that represents sortable options. This directive wraps around
+*   the jQuery UI sortable widget and all those options are supported
+* @param {string=} ngModel An array on the current scope to be controlled by this directive. Sorting
+*   and drag/drop will change the scope object of this `ngModel` and possibly the `ngModel` of connected
+*   `ruiSortable` directives
+* @description
+* This directive makes an element sortable
+###
+module.directive "ruiSortable", ["ruiSortableConfig", "$timeout", "$log", (ruiSortableConfig, $timeout, $log) ->
   require: "?ngModel"
   link: (scope, element, attrs, ngModel) ->
-
+    combineCallbacks = (first, second) ->
+      if second and (typeof second is "function")
+        return (e, ui) ->
+          first e, ui
+          second e, ui
+      first
+    savedNodes = undefined
     opts = angular.extend({}, ruiSortableConfig, scope.$eval(attrs.ruiSortable))
+    callbacks =
+      receive: null
+      remove: null
+      start: null
+      stop: null
+      update: null
 
     if ngModel
-      ngModel.$render = ->
-        element.sortable "refresh"
-
-      onStart = (e, ui) ->
+      
+      # When we add or remove elements, we need the sortable to 'refresh'
+      # so it can find the new/removed elements.
+      scope.$watch attrs.ngModel + ".length", ->
         
+        # Timeout to let ng-repeat modify the DOM
+        $timeout ->
+          element.sortable "refresh"
+
+
+      callbacks.start = (e, ui) ->
+        
+        # Save the starting position of dragged item
         # Save position of dragged item
         ui.item.sortable =
           startIndex: ui.item.index()
           startModel: ngModel
+          index: ui.item.index()
+          cancel: ->
+            ui.item.sortable._isCanceled = true
 
-      onUpdate = (e, ui) ->
+          isCanceled: ->
+            ui.item.sortable._isCanceled
+
+          _isCanceled: false
+
+      callbacks.activate = (e, ui) ->
         
-        # For some reason the reference to ngModel in stop() is wrong
-        ui.item.sortable.resort = ngModel
-
-      onReceive = (e, ui) ->
-        ui.item.sortable.relocate = true
+        # We need to make a copy of the current element's contents so
+        # we can restore it after sortable has messed it up.
+        # This is inside activate (instead of start) in order to save
+        # both lists when dragging between connected lists.
+        savedNodes = element.contents()
         
-        # added item to array into correct position and set up flag
-        ngModel.$modelValue.splice ui.item.index(), 0, ui.item.sortable.moved
-
-      onRemove = (e, ui) ->
+        # If this list has a placeholder (the connected lists won't),
+        # don't inlcude it in saved nodes.
+        placeholder = element.sortable("option", "placeholder")
         
-        # copy data into item
-        if ngModel.$modelValue.length is 1
-          ui.item.sortable.moved = ngModel.$modelValue.splice(0, 1)[0]
-        else
-          ui.item.sortable.moved = ngModel.$modelValue.splice(ui.item.sortable.startIndex, 1)[0]
+        # placeholder.element will be a function if the placeholder, has
+        # been created (placeholder will be an object).  If it hasn't
+        # been created, either placeholder will be false if no
+        # placeholder class was given or placeholder.element will be
+        # undefined if a class was given (placeholder will be a string)
+        if placeholder and placeholder.element and typeof placeholder.element is "function"
+          
+          # exact match with the placeholder's class attribute to handle
+          # the case that multiple connected sortables exist and
+          # the placehoilder option equals the class of sortable items
+          excludes = element.find("[class=\"" + placeholder.element().attr("class") + "\"]")
+          savedNodes = savedNodes.not(excludes)
 
-      onStop = (e, ui) ->
+      callbacks.update = (e, ui) ->
+        
+        # Save current drop position but only if this is not a second
+        # update that happens when moving between lists because then
+        # the value will be overwritten with the old value
+        unless ui.item.sortable.received
+          ui.item.sortable.dropindex = ui.item.index()
+          
+          # Cancel the sort (let ng-repeat do the sort for us)
+          # Don't cancel if this is the received list because it has
+          # already been canceled in the other list, and trying to cancel
+          # here will mess up the DOM.
+          element.sortable "cancel"
+        
+        # Put the nodes back exactly the way they started (this is very
+        # important because ng-repeat uses comment elements to delineate
+        # the start and stop of repeat sections and sortable doesn't
+        # respect their order (even if we cancel, the order of the
+        # comments are still messed up).
+        savedNodes.detach().appendTo element
+        
+        # If received is true (an item was dropped in from another list)
+        # then we add the new item to this list otherwise wait until the
+        # stop event where we will know if it was a sort or item was
+        # moved here from another list
+        if ui.item.sortable.received and not ui.item.sortable.isCanceled()
+          scope.$apply ->
+            ngModel.$modelValue.splice ui.item.sortable.dropindex, 0, ui.item.sortable.moved
 
+
+      callbacks.stop = (e, ui) ->
         if ui.item.sortable.resort
           ui.item.sortable.endIndex = ui.item.index()
           ui.item.sortable.endModel = ui.item.sortable.resort
         
-        # digest all prepared changes
-        if ui.item.sortable.resort and not ui.item.sortable.relocate
-          
-          # Fetch saved and current position of dropped element
-          start = ui.item.sortable.startIndex
-          end = ui.item.sortable.endIndex
-          
-          # Reorder array and apply change to scope
-          ui.item.sortable.resort.$modelValue.splice end, 0, ui.item.sortable.resort.$modelValue.splice(start, 1)[0]
+        # If the received flag hasn't be set on the item, this is a
+        # normal sort, if dropindex is set, the item was moved, so move
+        # the items in the list.
+        if not ui.item.sortable.received and ("dropindex" of ui.item.sortable) and not ui.item.sortable.isCanceled()
+          scope.$apply ->
+            ngModel.$modelValue.splice ui.item.sortable.dropindex, 0, ngModel.$modelValue.splice(ui.item.sortable.index, 1)[0]
 
-        scope.$apply() if ui.item.sortable.resort or ui.item.sortable.relocate
 
-      
-      # If user provided 'start' callback compose it with onStart function
-      opts.start = ((_start) ->
-        (e, ui) ->
-          onStart e, ui
-          _start e, ui  if typeof _start is "function"
-      )(opts.start)
-      
-      # If user provided 'start' callback compose it with onStart function
-      opts.stop = ((_stop) ->
-        (e, ui) ->
-          onStop e, ui
-          _stop e, ui  if typeof _stop is "function"
-      )(opts.stop)
-      
-      # If user provided 'update' callback compose it with onUpdate function
-      opts.update = ((_update) ->
-        (e, ui) ->
-          onUpdate e, ui
-          _update e, ui  if typeof _update is "function"
-      )(opts.update)
-      
-      # If user provided 'receive' callback compose it with onReceive function
-      opts.receive = ((_receive) ->
-        (e, ui) ->
-          onReceive e, ui
-          _receive e, ui  if typeof _receive is "function"
-      )(opts.receive)
-      
-      # If user provided 'remove' callback compose it with onRemove function
-      opts.remove = ((_remove) ->
-        (e, ui) ->
-          onRemove e, ui
-          _remove e, ui  if typeof _remove is "function"
-      )(opts.remove)
+      callbacks.receive = (e, ui) ->
+        
+        # An item was dropped here from another list, set a flag on the
+        # item.
+        ui.item.sortable.received = true
+
+      callbacks.remove = (e, ui) ->
+        
+        # Remove the item from this list's model and copy data into item,
+        # so the next list can retrive it
+        unless ui.item.sortable.isCanceled()
+          scope.$apply ->
+            ui.item.sortable.moved = ngModel.$modelValue.splice(ui.item.sortable.index, 1)[0]
+
+
+      scope.$watch attrs.uiSortable, ((newVal, oldVal) ->
+        angular.forEach newVal, (value, key) ->
+          if callbacks[key]
+            if key is "stop"
+              
+              # call apply after stop
+              value = combineCallbacks(value, ->
+                scope.$apply()
+              )
+            
+            # wrap the callback
+            value = combineCallbacks(callbacks[key], value)
+          element.sortable "option", key, value
+
+      ), true
+      angular.forEach callbacks, (value, key) ->
+        opts[key] = combineCallbacks(value, opts[key])
+
+    else
+      $log.info "ui.sortable: ngModel not provided!", element
     
     # Create sortable
     element.sortable opts
+]
 angular.module('rui.tabs.directives.controllers.tab', [])
 .controller 'TabCtrl',
   class TabsetCtrl
@@ -1062,36 +1272,6 @@ module = angular.module 'rui.tabs', [
 ]
 
 angular.module 'rui.templates', []
-
-###*
- * @ngdoc overview
- * @name rui.test.phantom
- * @description
- * Adds some jquery plugins for doing native events, since these don't work correctly with jquery and phantomJS.
- * Include this within your unit tests to perform things like $(el).nativeClick to trigger 'ng-click'.
- * http://stackoverflow.com/questions/8294728/how-do-i-simulate-user-clicking-a-link-in-jquery 
-###
-angular.module('rui.test.phantom', []).run(['$log', ($log)->
-  $log.debug('Initializing native click events')
-
-  dispatchEvent = (eventType) ->
-    doc = @ownerDocument
-    evt = doc.createEvent('MouseEvents')
-    evt.initMouseEvent(eventType, true, true, doc.defaultView, 1, 0, 0, 0, 0, false, false, false, false, 0, null)
-    @dispatchEvent(evt)
-
-  $.fn.nativeMouseEvent = (eventType) ->
-    return @each () ->
-      dispatchEvent.apply(@, [eventType])
-
-  $.fn.nativeClick = () ->
-    return @each () ->
-      if not 'createEvent' in document
-        @click() # IE
-      else
-      dispatchEvent.apply(@, ['click'])
-])
-
 angular.module('rui.util.transclude.directives.controllers.transclude', [])
 .controller 'TranscludeCtrl',
   class TranscludeCtrl

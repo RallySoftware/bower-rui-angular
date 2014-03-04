@@ -1,14 +1,8 @@
 (function () {
-  var CardboardCtrl, ColumnCtrl, ColumnScrollableCtrl, DropdownCtrl, HighchartsCtrl, HighchartsHtmlCtrl, ItemCtrl, PubSub, TabsetCtrl, ToggleCtrl, TranscludeCtrl, card, cardboard, column, columnscrollable, columnscrollbars, dropdown, highcharts, module, rui, tab, tabset, transclude, util, __bind = function (fn, me) {
+  var CardCtrl, CardboardCtrl, ColumnCtrl, ColumnScrollableCtrl, DropdownCtrl, HighchartsCtrl, HighchartsHtmlCtrl, ItemCtrl, PubSub, TabsetCtrl, ToggleCtrl, TranscludeCtrl, cardboard, column, columnscrollbars, dropdown, highcharts, module, rui, tab, tabset, transclude, util, __bind = function (fn, me) {
       return function () {
         return fn.apply(me, arguments);
       };
-    }, __indexOf = [].indexOf || function (item) {
-      for (var i = 0, l = this.length; i < l; i++) {
-        if (i in this && this[i] === item)
-          return i;
-      }
-      return -1;
     };
   cardboard = angular.module('rui.cardboard', [
     'rui.templates',
@@ -19,7 +13,26 @@
     'rui.cardboard.directives.columnscrollbars',
     'rui.cardboard.filters.wip'
   ]);
-  angular.module('rui.cardboard.controllers.cardboard', []).controller('rui.cardboard.controllers.cardboard', CardboardCtrl = function () {
+  module = angular.module('rui.cardboard.controllers.card', []);
+  module.controller('rui.cardboard.controllers.card', CardCtrl = function () {
+    CardCtrl.$inject = [
+      '$scope',
+      '$attrs'
+    ];
+    function CardCtrl($scope, $attrs) {
+      var _this = this;
+      this.$scope = $scope;
+      this.$card = this.$scope.$card = this.$scope.$new();
+      if ($attrs.ruiCardColor) {
+        $attrs.$observe('ruiCardColor', function (color) {
+          return _this.$card.color = color;
+        });
+      }
+    }
+    return CardCtrl;
+  }());
+  module = angular.module('rui.cardboard.controllers.cardboard', []);
+  module.controller('rui.cardboard.controllers.cardboard', CardboardCtrl = function () {
     CardboardCtrl.$inject = ['$timeout'];
     function CardboardCtrl($timeout) {
       this.$timeout = $timeout;
@@ -33,6 +46,15 @@
         return column.width = '' + _this.columnWidth + '%';
       });
     };
+    /**
+    * @ngdoc function
+    * @name rui.cardboard.controllers.cardboard#addColumn
+    * @methodOf rui.cardboard.directives:ruiCardboard
+    * @param {Object} scope The column's scope
+    * @description
+    * This should be called by a column within a cardboard. This method will tie a column and cardboard together.
+    * This method will eventually coordinate the width of each column within the cardboard
+    */
     CardboardCtrl.prototype.addColumn = function (column) {
       var _this = this;
       this.columns.push(column);
@@ -44,22 +66,54 @@
         return _this._adjustColumns();
       });
     };
+    /**
+    * @ngdoc function
+    * @name rui.cardboard.controllers.cardboard#removeColumn
+    * @methodOf rui.cardboard.directives:ruiCardboard
+    * @param {Object} scope The column's scope
+    * @description
+    * This should be called by a column within a cardboard. This method will remove the column from the columns
+    * tracked by the cardboard.
+    * This method will eventually coordinate the width of each column within the cardboard
+    */
     CardboardCtrl.prototype.removeColumn = function (column) {
-      return this.columns = _.filter(this.columns, function (col) {
+      var _this = this;
+      this.columns = _.filter(this.columns, function (col) {
         return col !== column;
+      });
+      if (this.adjustTimer) {
+        this.$timeout.cancel(this.adjustTimer);
+      }
+      return this.adjustTimer = this.$timeout(function () {
+        return _this._adjustColumns();
       });
     };
     return CardboardCtrl;
   }());
-  angular.module('rui.cardboard.controllers.column', []).controller('rui.cardboard.controllers.column', ColumnCtrl = function () {
-    ColumnCtrl.$inject = ['$scope'];
-    function ColumnCtrl($scope) {
-      this.$scope = $scope;
+  module = angular.module('rui.cardboard.controllers.column', []);
+  module.controller('rui.cardboard.controllers.column', ColumnCtrl = function () {
+    function ColumnCtrl() {
     }
+    /**
+    * @ngdoc function
+    * @name rui.cardboard.controllers.column#addCard
+    * @methodOf rui.cardboard.directives:ruiColumn
+    * @param {Object} scope The card's scope
+    * @description
+    * This should be called by a card within a column when a card is rendered. This method will tie a card and column together
+    */
     ColumnCtrl.prototype.addCard = function (card) {
       return card.column = this;
     };
-    ColumnCtrl.prototype.removeCard = function () {
+    /**
+    * @ngdoc function
+    * @name rui.cardboard.controllers.column#removeCard
+    * @methodOf rui.cardboard.directives:ruiColumn
+    * @param {Object} scope The card's scope
+    * @description
+    * This should be called by a card within a column when a card is removed
+    */
+    ColumnCtrl.prototype.removeCard = function (card) {
     };
     return ColumnCtrl;
   }());
@@ -98,10 +152,24 @@
       this.scrollableColumns = [].concat(this.columns);
       return this.scrollColumns();
     };
+    /**
+    * @ngdoc function
+    * @name rui.cardboard.controllers.columnscrollable#scrollRight
+    * @methodOf rui.cardboard.directives:ruiColumnScrollable
+    * @description
+    * This method will scroll the visible columns to the right
+    */
     ColumnScrollableCtrl.prototype.scrollRight = function () {
       this.currentIndex++;
       return this.scrollColumns();
     };
+    /**
+    * @ngdoc function
+    * @name rui.cardboard.controllers.columnscrollable#scrollLeft
+    * @methodOf rui.cardboard.directives:ruiColumnScrollable
+    * @description
+    * This method will scroll the visible columns to the left
+    */
     ColumnScrollableCtrl.prototype.scrollLeft = function () {
       this.currentIndex--;
       return this.scrollColumns();
@@ -129,54 +197,175 @@
     };
     return ColumnScrollableCtrl;
   }());
-  card = angular.module('rui.cardboard.directives.card', [
+  module = angular.module('rui.cardboard.directives.card', [
     'rui.cardboard.directives.column',
-    'rui.cardboard.directives.cardboard'
+    'rui.cardboard.controllers.card'
   ]);
-  card.directive('ruiCard', function () {
+  /**
+  * @ngdoc directive
+  * @name rui.cardboard.directives:ruiCard
+  * @restrict EA
+  * @param {string} ngModel An object on the current scope that should be managed by this directive
+  * @param {expression=} ruiCardColor An angular expression that represents a color
+  * @description
+  * This component is meant to go in the column-content section of an {@link api/rui.cardboard.directives:ruiColumn ruiColumn}
+  * This component will add a new scope represented by `$card`
+  *
+  * @example
+    <example module="App">
+      <file name="script.js">
+        angular.module('App', ['rui.cardboard'])
+        .controller('Ctrl',
+          function Ctrl($scope) {
+            $scope.card = {
+              avatarUrl: 'https://www.tomtom.com/en_gb/images/homer_morevoices_tcm131-16571.gif',
+              name: 'Card 1',
+              ownerName: 'Bart',
+              formattedId: 'US123'
+            };
+          }
+        );
+      </file>
+      <file name="index.html">
+        <div ng-controller="Ctrl">
+          <rui-card ng-model="card" rui-card-color="red">
+            <div class="avatar">
+              <img class="small" ng-src="{{ card.avatarUrl }}"/>
+            </div>
+            <div class="card-owner">{{ card.ownerName }}</div>
+            <div class="card-id">
+              <span class="icon icon-story" class="icon-story"></span>
+              {{ card.formattedId }}
+            </div>
+            <div class="card-field">{{ card.name }}</div>
+          </rui-card>
+        </div>
+      </file>
+    </example>
+  */
+  module.directive('ruiCard', function () {
     return {
       restrict: 'EA',
       transclude: true,
       replace: true,
       require: [
-        '^ruiCardboard',
-        '^ruiColumn',
-        'ngModel'
+        'ngModel',
+        '^?ruiColumn'
       ],
       templateUrl: 'rui/cardboard/template/rui-card.html',
+      controller: 'rui.cardboard.controllers.card',
       compile: function (tElement, tAttrs, transcludeFn) {
-        return function (scope, element, attrs, controllers) {
-          var cardboardCtrl, columnCtrl, model;
-          cardboardCtrl = controllers[0], columnCtrl = controllers[1], model = controllers[2];
+        return function (scope, element, attrs, _arg) {
+          var card, columnCtrl, ngModel;
+          ngModel = _arg[0], columnCtrl = _arg[1];
           card = scope.$eval(attrs.ngModel);
-          scope.model = card;
-          card.fields = _.map(card.displayFields, function (displayField) {
-            var field;
-            if (card[displayField] !== void 0) {
-              return field = {
-                name: displayField,
-                value: scope.model[displayField]
-              };
-            }
-          });
-          if (attrs.color) {
-            scope.$watch(attrs.color, function (newValue, oldValue) {
-              return element.find('.card-color').css('background-color', newValue);
-            });
+          if (columnCtrl != null) {
+            columnCtrl.addCard(card);
           }
-          columnCtrl.addCard(scope);
-          return scope.$emit('cardrendered', card);
+          scope.$emit('cardrendered', card);
+          return element.on('$destroy', function () {
+            return columnCtrl != null ? columnCtrl.removeCard(card) : void 0;
+          });
         };
       }
     };
   });
   cardboard = angular.module('rui.cardboard.directives.cardboard', ['rui.cardboard.controllers.cardboard']);
+  /**
+  * @ngdoc directive
+  * @name rui.cardboard.directives:ruiCardboard
+  * @restrict EA
+  * @description
+  * The parent cardboard directive - it coordinates column and card directives
+  * @example
+    <example module="App">
+      <file name="script.js">
+        angular.module('App', ['rui.cardboard', 'rui.sortable'])
+        .controller('Ctrl',
+          function Ctrl($scope) {
+            $scope.columns = [
+              {
+                title: "On Deck",
+                wip: 2,
+                cards: [
+                  {
+                    formattedId: 'DE23',
+                    type: 'defect',
+                    name: 'Card 1',
+                    ownerName: 'Homer',
+                    avatarUrl: 'https://www.tomtom.com/en_gb/images/homer_morevoices_tcm131-16571.gif'
+                  }
+                ]
+              },
+              {
+                title: "Ready To Pull",
+                wip: 1,
+                cards: [
+                  {
+                    formattedId: 'US123',
+                    type: 'story',
+                    name: 'Card 2',
+                    ownerName: 'Bart',
+                    color: '#00A9E0',
+                    avatarUrl: 'http://images3.wikia.nocookie.net/__cb20100530014758/lossimpson/es/images/thumb/6/65/Bart_Simpson.png/170px-Bart_Simpson.png'
+                  }
+                ]
+              },
+              {
+                title: "In Progress",
+                wip: 1,
+                cards: []
+              },
+              {
+                title: "Testing",
+                wip: 1,
+                cards: []
+              }
+            ];
+  
+            $scope.scrollOptions = {
+              connectWith: '.column-content',
+              placeholder: 'card-placeholder'
+            }
+          }
+        );
+      </file>
+      <file name="index.html">
+        <div ng-controller="Ctrl">
+          <rui-cardboard>
+            <rui-column ng-repeat="column in columns" ng-model="column" rui-column-scrollable="columns" num-columns="3" ng-class="{'over-capacity': column.wip > 0 && column.cards.length > column.wip}">
+              <div class="column-header">
+                <div rui-column-scrollbars ng-model="column"></div>
+                <h3 class="title">{{column.title}}</h3>
+                <div class="wip">{{column.cards.length}} of {{column.wip | wip}}</div>
+              </div>
+              <div class="column-content" rui-sortable="scrollOptions" ng-model="column.cards">
+                <rui-card ng-repeat="card in column.cards" color="card.color" ng-model="card">
+                  <div class="avatar">
+                    <img class="small" ng-src="{{ card.avatarUrl }}"/>
+                  </div>
+                  <div class="card-owner">{{ card.ownerName }}</div>
+                  <div class="card-id">
+                    <span class="icon icon-story" ng-class="'icon-'+card.type"></span>
+                    {{ card.formattedId }}
+                  </div>
+                  <div class="card-field">{{card.name}}</div>
+                </rui-card>
+              </div>
+            </rui-column>
+          </rui-cardboard>
+        </div>
+      </file>
+    </example>
+  */
   cardboard.directive('ruiCardboard', function () {
     return {
       restrict: 'EA',
+      transclude: true,
+      replace: true,
       controller: 'rui.cardboard.controllers.cardboard',
+      templateUrl: 'rui/cardboard/template/rui-cardboard.html',
       compile: function (tElement, tAttrs) {
-        tElement.addClass('rui-cardboard');
         return function (scope, element, attrs, controller) {
         };
       }
@@ -186,35 +375,80 @@
     'rui.cardboard.controllers.column',
     'rui.cardboard.directives.cardboard'
   ]);
+  /**
+  * @ngdoc directive
+  * @name rui.cardboard.directives:ruiColumn
+  * @param {string} ngModel An object on the current scope that should be managed by this directive
+  * @restrict EA
+  * @description
+  * The column directive adds a column
+  * @example
+    <example module="App">
+      <file name="script.js">
+        angular.module('App', ['rui.cardboard', 'rui.sortable'])
+        .controller('Ctrl',
+          function Ctrl($scope) {
+            $scope.column = {
+              title: 'Column Title',
+              wip: 1
+            };
+          }
+        );
+      </file>
+      <file name="index.html">
+        <div ng-controller="Ctrl">
+          <rui-cardboard><!-- a column is meant to be in a cardboard -->
+            <rui-column ng-model="column">
+              <div class="column-header">
+                <h3 class="title">{{ column.title }}</h3>
+                <div class="wip">0 of {{ column.wip }}</div>
+              </div>
+              <div class="column-content">
+                <!-- cards go here -->
+              </div>
+            </rui-column>
+          </rui-cardboard>
+        </div>
+      </file>
+    </example>
+  */
   column.directive('ruiColumn', function () {
     return {
       restrict: 'EA',
       transclude: true,
       require: [
-        '^ruiCardboard',
-        'ngModel'
+        'ngModel',
+        '^?ruiCardboard'
       ],
       replace: true,
       templateUrl: 'rui/cardboard/template/rui-column.html',
       controller: 'rui.cardboard.controllers.column',
       compile: function (tElement, tAttr, transcludeFn) {
-        return function (scope, element, attrs, controllers) {
-          var cardboardCtrl, model;
-          cardboardCtrl = controllers[0], model = controllers[1];
-          scope.model = scope.$eval(attrs.ngModel);
-          cardboardCtrl.addColumn(scope);
-          element.on('$destroy', function () {
-            return cardboardCtrl.removeColumn(scope);
-          });
-          return transcludeFn(scope, function (clone) {
-            return element.append(clone);
+        return function (scope, element, attrs, _arg) {
+          var cardboardCtrl, ngModel;
+          ngModel = _arg[0], cardboardCtrl = _arg[1];
+          column = scope.$eval(attrs.ngModel);
+          if (cardboardCtrl != null) {
+            cardboardCtrl.addColumn(column);
+          }
+          return element.on('$destroy', function () {
+            return cardboardCtrl != null ? cardboardCtrl.removeColumn(column) : void 0;
           });
         };
       }
     };
   });
-  columnscrollable = angular.module('rui.cardboard.directives.columnscrollable', ['rui.cardboard.controllers.columnscrollable']);
-  columnscrollable.directive('ruiColumnScrollable', function () {
+  module = angular.module('rui.cardboard.directives.columnscrollable', ['rui.cardboard.controllers.columnscrollable']);
+  /**
+  * @ngdoc directive
+  * @name rui.cardboard.directives:ruiColumnScrollable
+  * @restrict A
+  * @param {string} ngModel An array variable on the current scope that should be managed by this directive
+  * @description
+  * This directive allows an {@link api/rui.cardboard.directives:ruiColumn ruiColumn} directive to
+  *   become scrollable if there are too many columns to display
+  */
+  module.directive('ruiColumnScrollable', function () {
     return {
       restrict: 'A',
       priority: 100000,
@@ -222,6 +456,15 @@
     };
   });
   columnscrollbars = angular.module('rui.cardboard.directives.columnscrollbars', ['rui.cardboard.directives.column']);
+  /**
+  * @ngdoc directive
+  * @name rui.cardboard.directives:ruiColumnScrollbars
+  * @restrict A
+  * @description
+  * This directive is a simple component to show scrollbars.
+  * It is meant to be used with the {@link rui.cardboard.directives:ruiColumnScrollable ruiColumnScrollable}
+  *   directive. It should be used in the content-header of an {@link api/rui.cardboard.directives:ruiColumn ruiColumn}
+  */
   columnscrollbars.directive('ruiColumnScrollbars', function () {
     return {
       restrict: 'A',
@@ -298,6 +541,36 @@
     };
     return ItemCtrl;
   }());
+  /**
+   * @ngdoc directive
+   * @name rui.dropdown.directives:ruiDropdown
+   * @description
+   * Container for rui dropdown menus
+   * @example
+      <example module="App">
+          <file name="script.js">
+              angular.module('App', ['rui.dropdown'])
+              .controller('Ctrl',
+                function Ctrl($scope) {
+                  $scope.options = [
+                    {name: 'Option1'},
+                    {name: 'Option2'}
+                  ];
+                }
+              );
+          </file>
+          <file name="index.html">
+              <div ng-controller="Ctrl">              
+                <div rui-dropdown ng-model="selectedOption">
+                  <div rui-dropdown-label>{{selectedOption.name}}</div>
+                  <ul rui-dropdown-menu>
+                    <li rui-dropdown-item ng-repeat="option in options" ng-model="option" ng-bind="option.name">
+                  </ul>
+                </div>
+              </div>
+          </file>
+      </example>
+  */
   module = angular.module('rui.dropdown.directives.dropdown', ['rui.dropdown.directives.controllers.dropdown']).directive('ruiDropdown', [function () {
       return {
         restrict: 'EA',
@@ -349,6 +622,12 @@
         }
       };
     }]);
+  /**
+   * @ngdoc directive
+   * @name rui.dropdown.directives:ruiDropdownItem
+   * @description
+   * Denotes a selectable item from the dropdown menu
+  */
   dropdown = angular.module('rui.dropdown.directives.item', ['rui.dropdown.directives.controllers.item']).directive('ruiDropdownItem', [function () {
       return {
         restrict: 'EA',
@@ -414,6 +693,11 @@
       var _ref;
       return (_ref = this.$scope.$highcharts.chart.series[n]) != null ? _ref.hide() : void 0;
     };
+    /*
+    @param {element}
+    @param {options} Highcharts configuration object
+    @public
+    */
     HighchartsCtrl.prototype.initHighcharts = function (element, options) {
       var defaults, event, _i, _len, _ref;
       if (options == null) {
@@ -434,6 +718,10 @@
       this.$scope.$highcharts.chart = new this.Highcharts.Chart(options);
       return this.$scope.$highcharts.chart;
     };
+    /*
+    Delegate to highcharts events from the config, then broadcast the chart 
+    events down the directive scope.
+    */
     HighchartsCtrl.prototype._onEvent = function (eventName) {
       var _this = this;
       return function (e) {
@@ -481,6 +769,38 @@
     };
     return ToggleCtrl;
   }());
+  /**
+   * @ngdoc directive
+   * @name rui.highcharts.directives:ruiHighcharts
+   * @description
+   * The base for highcharts directives. This creates a new Highcharts.Chart rendered to the directive's template.
+   * @example
+      <example module="App">
+          <file name="script.js">
+              angular.module('App', ['rui.highcharts'])
+              .controller('Ctrl',
+                function Ctrl($scope) {
+                    $scope.highchartsConfig = {
+                      chart: {
+                        type: 'bar'
+                      },
+                      series: [
+                        {
+                          name: 'Year 1800',
+                          data: [107, 31, 635, 203, 2]
+                        }
+                      ]
+                    }
+                }
+              );
+          </file>
+          <file name="index.html">
+              <div ng-controller="Ctrl">              
+                <div rui-highcharts highcharts-config="highchartsConfig"></div>
+              </div>
+          </file>
+      </example>
+  */
   highcharts = angular.module('rui.highcharts.directives.highcharts', [
     'rui.highcharts.directives.controllers.highcharts',
     'rui.highcharts.factories.highcharts'
@@ -514,6 +834,57 @@
         }
       };
     }]);
+  /**
+   * @ngdoc directive
+   * @name rui.highcharts.directives:ruiHighchartsHtml
+   * @description
+   * The directive adds and absolute positioned html block that can be positioned with ng-style over the chart.
+   * @example
+      <example module="App">
+          <file name="script.js">
+              angular.module('App', ['rui.highcharts'])
+              .controller('Ctrl',
+                function Ctrl($scope) {
+                    $scope.highcharts = {
+                      config: {
+                        chart: {
+                          type: 'bar'
+                        },
+                        series: [
+                          {
+                            name: 'Year 1800',
+                            data: [107, 31, 635, 203, 2]
+                          }
+                        ]
+                      }
+                    };
+                    $scope.overlayStyle = function(){
+                      var top = ($scope.highcharts.chart.chartHeight - 50)
+                      var left = ($scope.highcharts.chart.chartWidth - 100)
+                      var style = {top: top+'px', left: left+'px'}
+                      return style;
+                    };
+                    $scope.toggleSeries = function(){
+                      var series = $scope.highcharts.chart.series[0];
+                      $scope.toggle = !$scope.toggle;
+                      if($scope.toggle) {
+                        series.hide();
+                      } else {
+                        series.show();
+                      }                    
+                    };
+                }
+              );
+          </file>
+          <file name="index.html">
+              <div ng-controller="Ctrl">              
+                <div rui-highcharts highcharts-config="highcharts.config" ng-model="highcharts.chart">
+                  <div rui-highcharts-html ng-style="overlayStyle()" ng-click="toggleSeries()">Toggle Series on/off</div>
+                </div>
+              </div>
+          </file>
+      </example>
+  */
   angular.module('rui.highcharts.directives.html', [
     'rui.highcharts.directives.controllers.highcharts',
     'rui.highcharts.directives.controllers.html'
@@ -534,6 +905,12 @@
         }
       };
     }]);
+  /**
+   * @ngdoc service
+   * @name rui.highcharts.factories:Highcharts
+   * @description
+   * Returns the global Highcharts module. Allows for decorating or mocking.
+  */
   highcharts = angular.module('rui.highcharts.factories.highcharts', []).factory('Highcharts', function () {
     return Highcharts;
   });
@@ -580,95 +957,151 @@
     'rui.highcharts',
     'rui.dropdown',
     'rui.tabs',
-    'rui.util'
+    'rui.util',
+    'rui.scroll'
   ]);
-  angular.module('rui.sortable', []).value('ruiSortableConfig', {}).directive('ruiSortable', [
+  angular.module('rui.scroll', ['rui.scroll.when']);
+  angular.module('rui.scroll.when.directives.when', []).directive('ruiScrollWhen', [
+    '$timeout',
+    function ($timeout) {
+      return {
+        restrict: 'A',
+        scope: { ruiScrollWhen: '=' },
+        link: function ($scope, $element, $attrs) {
+          return $scope.$watch('ruiScrollWhen', function (value) {
+            if (value) {
+              return $timeout(function () {
+                var _ref;
+                return (_ref = angular.element($element != null ? $element[0] : void 0)) != null ? _ref.scrollIntoView() : void 0;
+              });
+            }
+          });
+        }
+      };
+    }
+  ]);
+  angular.module('rui.scroll.when', ['rui.scroll.when.directives.when']);
+  module = angular.module('rui.sortable', []);
+  module.value('ruiSortableConfig', {});
+  /**
+  * @ngdoc directive
+  * @name rui.sortable:ruiSortable
+  * @restrict A
+  * @param {string} ruiSortable An object that represents sortable options. This directive wraps around
+  *   the jQuery UI sortable widget and all those options are supported
+  * @param {string=} ngModel An array on the current scope to be controlled by this directive. Sorting
+  *   and drag/drop will change the scope object of this `ngModel` and possibly the `ngModel` of connected
+  *   `ruiSortable` directives
+  * @description
+  * This directive makes an element sortable
+  */
+  module.directive('ruiSortable', [
     'ruiSortableConfig',
-    function (ruiSortableConfig) {
+    '$timeout',
+    '$log',
+    function (ruiSortableConfig, $timeout, $log) {
       return {
         require: '?ngModel',
         link: function (scope, element, attrs, ngModel) {
-          var onReceive, onRemove, onStart, onStop, onUpdate, opts;
+          var callbacks, combineCallbacks, opts, savedNodes;
+          combineCallbacks = function (first, second) {
+            if (second && typeof second === 'function') {
+              return function (e, ui) {
+                first(e, ui);
+                return second(e, ui);
+              };
+            }
+            return first;
+          };
+          savedNodes = void 0;
           opts = angular.extend({}, ruiSortableConfig, scope.$eval(attrs.ruiSortable));
+          callbacks = {
+            receive: null,
+            remove: null,
+            start: null,
+            stop: null,
+            update: null
+          };
           if (ngModel) {
-            ngModel.$render = function () {
-              return element.sortable('refresh');
-            };
-            onStart = function (e, ui) {
+            scope.$watch(attrs.ngModel + '.length', function () {
+              return $timeout(function () {
+                return element.sortable('refresh');
+              });
+            });
+            callbacks.start = function (e, ui) {
               return ui.item.sortable = {
                 startIndex: ui.item.index(),
-                startModel: ngModel
+                startModel: ngModel,
+                index: ui.item.index(),
+                cancel: function () {
+                  return ui.item.sortable._isCanceled = true;
+                },
+                isCanceled: function () {
+                  return ui.item.sortable._isCanceled;
+                },
+                _isCanceled: false
               };
             };
-            onUpdate = function (e, ui) {
-              return ui.item.sortable.resort = ngModel;
-            };
-            onReceive = function (e, ui) {
-              ui.item.sortable.relocate = true;
-              return ngModel.$modelValue.splice(ui.item.index(), 0, ui.item.sortable.moved);
-            };
-            onRemove = function (e, ui) {
-              if (ngModel.$modelValue.length === 1) {
-                return ui.item.sortable.moved = ngModel.$modelValue.splice(0, 1)[0];
-              } else {
-                return ui.item.sortable.moved = ngModel.$modelValue.splice(ui.item.sortable.startIndex, 1)[0];
+            callbacks.activate = function (e, ui) {
+              var excludes, placeholder;
+              savedNodes = element.contents();
+              placeholder = element.sortable('option', 'placeholder');
+              if (placeholder && placeholder.element && typeof placeholder.element === 'function') {
+                excludes = element.find('[class="' + placeholder.element().attr('class') + '"]');
+                return savedNodes = savedNodes.not(excludes);
               }
             };
-            onStop = function (e, ui) {
-              var end, start;
+            callbacks.update = function (e, ui) {
+              if (!ui.item.sortable.received) {
+                ui.item.sortable.dropindex = ui.item.index();
+                element.sortable('cancel');
+              }
+              savedNodes.detach().appendTo(element);
+              if (ui.item.sortable.received && !ui.item.sortable.isCanceled()) {
+                return scope.$apply(function () {
+                  return ngModel.$modelValue.splice(ui.item.sortable.dropindex, 0, ui.item.sortable.moved);
+                });
+              }
+            };
+            callbacks.stop = function (e, ui) {
               if (ui.item.sortable.resort) {
                 ui.item.sortable.endIndex = ui.item.index();
                 ui.item.sortable.endModel = ui.item.sortable.resort;
               }
-              if (ui.item.sortable.resort && !ui.item.sortable.relocate) {
-                start = ui.item.sortable.startIndex;
-                end = ui.item.sortable.endIndex;
-                ui.item.sortable.resort.$modelValue.splice(end, 0, ui.item.sortable.resort.$modelValue.splice(start, 1)[0]);
-              }
-              if (ui.item.sortable.resort || ui.item.sortable.relocate) {
-                return scope.$apply();
+              if (!ui.item.sortable.received && 'dropindex' in ui.item.sortable && !ui.item.sortable.isCanceled()) {
+                return scope.$apply(function () {
+                  return ngModel.$modelValue.splice(ui.item.sortable.dropindex, 0, ngModel.$modelValue.splice(ui.item.sortable.index, 1)[0]);
+                });
               }
             };
-            opts.start = function (_start) {
-              return function (e, ui) {
-                onStart(e, ui);
-                if (typeof _start === 'function') {
-                  return _start(e, ui);
+            callbacks.receive = function (e, ui) {
+              return ui.item.sortable.received = true;
+            };
+            callbacks.remove = function (e, ui) {
+              if (!ui.item.sortable.isCanceled()) {
+                return scope.$apply(function () {
+                  return ui.item.sortable.moved = ngModel.$modelValue.splice(ui.item.sortable.index, 1)[0];
+                });
+              }
+            };
+            scope.$watch(attrs.uiSortable, function (newVal, oldVal) {
+              return angular.forEach(newVal, function (value, key) {
+                if (callbacks[key]) {
+                  if (key === 'stop') {
+                    value = combineCallbacks(value, function () {
+                      return scope.$apply();
+                    });
+                  }
+                  value = combineCallbacks(callbacks[key], value);
                 }
-              };
-            }(opts.start);
-            opts.stop = function (_stop) {
-              return function (e, ui) {
-                onStop(e, ui);
-                if (typeof _stop === 'function') {
-                  return _stop(e, ui);
-                }
-              };
-            }(opts.stop);
-            opts.update = function (_update) {
-              return function (e, ui) {
-                onUpdate(e, ui);
-                if (typeof _update === 'function') {
-                  return _update(e, ui);
-                }
-              };
-            }(opts.update);
-            opts.receive = function (_receive) {
-              return function (e, ui) {
-                onReceive(e, ui);
-                if (typeof _receive === 'function') {
-                  return _receive(e, ui);
-                }
-              };
-            }(opts.receive);
-            opts.remove = function (_remove) {
-              return function (e, ui) {
-                onRemove(e, ui);
-                if (typeof _remove === 'function') {
-                  return _remove(e, ui);
-                }
-              };
-            }(opts.remove);
+                return element.sortable('option', key, value);
+              });
+            }, true);
+            angular.forEach(callbacks, function (value, key) {
+              return opts[key] = combineCallbacks(value, opts[key]);
+            });
+          } else {
+            $log.info('ui.sortable: ngModel not provided!', element);
           }
           return element.sortable(opts);
         }
@@ -728,6 +1161,8 @@
     };
     return TabsetCtrl;
   }());
+  /*
+  */
   tab = angular.module('rui.tabs.directives.tab', ['rui.tabs.directives.controllers.tab']).directive('ruiTab', [function () {
       return {
         restrict: 'EA',
@@ -753,6 +1188,8 @@
         }
       };
     }]);
+  /*
+  */
   tab = angular.module('rui.tabs.directives.tabContent', []).directive('ruiTabContent', [function () {
       return {
         restrict: 'EA',
@@ -765,6 +1202,8 @@
         }
       };
     }]);
+  /*
+  */
   tabset = angular.module('rui.tabs.directives.tabHeading', []).directive('ruiTabHeading', [function () {
       return {
         restrict: 'EA',
@@ -786,6 +1225,50 @@
         }
       };
     }]);
+  /**
+   * @ngdoc directive
+   * @name rui.tabs.directives:ruiTabset
+   * @description
+   * Implementation of bootstrap tabs
+   * @example
+      <example module="App">
+          <file name="script.js">
+              angular.module('App', ['rui.tabs'])
+              .controller('Ctrl',
+                function Ctrl($scope) {
+                    $scope.tabs = [
+                      { name: 'tab1', active: true },
+                      { name: 'tab2', disabled: true },
+                      { name: 'tab3' }
+                    ];
+                    $scope.blah = "blah";
+                    $scope.addTab = function(){
+                      $scope.tabs.push({name:'tab4'});
+                    };
+                    $scope.removeTab = function(){
+                      $scope.tabs.splice(0, 1);
+                    };
+                }
+              );
+          </file>
+          <file name="index.html">
+              <div ng-controller="Ctrl">
+                <div>
+                  <a ng-click="addTab()">Add a tab</a>
+                  <br>
+                  <a ng-click="removeTab()">Remove a tab</a>
+                </div>
+                <div rui-tabset ng-model="selectedTab">
+                  <!-- directive: rui-transclude-class rui-tab -->
+                  <div ng-repeat="tab in tabs" rui-tab ng-model="tab">
+                    <div rui-tab-heading>{{tab.name}}</div>
+                    <div rui-tab-content ng-class="{active: tab.active}">{{tab.name}} - content</div>
+                	</div>
+                </div>
+              </div>
+          </file>
+      </example>
+  */
   tabset = angular.module('rui.tabs.directives.tabset', ['rui.tabs.directives.controllers.tabset']).directive('ruiTabset', [function () {
       return {
         restrict: 'EA',
@@ -813,35 +1296,6 @@
     'rui.tabs.directives.tabContent'
   ]);
   angular.module('rui.templates', []);
-  angular.module('rui.test.phantom', []).run([
-    '$log',
-    function ($log) {
-      var dispatchEvent;
-      $log.debug('Initializing native click events');
-      dispatchEvent = function (eventType) {
-        var doc, evt;
-        doc = this.ownerDocument;
-        evt = doc.createEvent('MouseEvents');
-        evt.initMouseEvent(eventType, true, true, doc.defaultView, 1, 0, 0, 0, 0, false, false, false, false, 0, null);
-        return this.dispatchEvent(evt);
-      };
-      $.fn.nativeMouseEvent = function (eventType) {
-        return this.each(function () {
-          return dispatchEvent.apply(this, [eventType]);
-        });
-      };
-      return $.fn.nativeClick = function () {
-        return this.each(function () {
-          var _ref;
-          if (_ref = !'createEvent', __indexOf.call(document, _ref) >= 0) {
-            this.click();
-          } else {
-          }
-          return dispatchEvent.apply(this, ['click']);
-        });
-      };
-    }
-  ]);
   angular.module('rui.util.transclude.directives.controllers.transclude', []).controller('TranscludeCtrl', TranscludeCtrl = function () {
     TranscludeCtrl.$inject = [
       '$scope',
@@ -901,6 +1355,12 @@
     };
     return TranscludeCtrl;
   }());
+  /**
+   * @ngdoc directive
+   * @name rui.utils.transclude.directives:ruiTranscludeAttribute
+   * @description
+   *
+  */
   transclude = angular.module('rui.util.transclude.directives.attribute', []).directive('ruiTranscludeAttr', [function () {
       return {
         restrict: 'M',
@@ -917,6 +1377,16 @@
         }
       };
     }]);
+  /**
+   * @ngdoc directive
+   * @name rui.utils.transclude.directives:ruiTranscludeClass
+   * @description
+   * Similar to ng-transclude, allows specification of jquery selectors for use with multiple transclusion points.
+   * Specify a filter as the rui-transclude attribute value to select what content should be appended into the 
+   * current transclusion point. You can specify 'rui-transclude-optional' to allow for soft transcldes (where
+   * there may be no content to push).
+   *
+  */
   transclude = angular.module('rui.util.transclude.directives.class', []).directive('ruiTranscludeClass', [
     '$compile',
     function ($compile) {
@@ -938,6 +1408,55 @@
       };
     }
   ]);
+  /**
+   * @ngdoc directive
+   * @name rui.utils.transclude.directives:ruiTransclude
+   * @description
+   * Similar to ng-transclude, allows specification of jquery selectors for use with multiple transclusion points.
+   * Specify a filter as the rui-transclude attribute value to select what content should be appended into the 
+   * current transclusion point. You can add the attribute 'rui-transclude-optional' to allow for soft transcludes (where
+   * there may be no content to push).
+   * 
+   * Some angular directives like ng-if and ng-repeat will create html comment nodes at the time of transclusion.
+   * When this is the case, you can use the 'rui-transclude-class' and 'rui-transclude-attr' directives to get these
+   * nodes transcluded. They will be treated specially by the linking function, and the next non-text node will be used
+   * in the transclusion instead.
+   * 
+   * @example
+      <example module="App">
+          <file name="script.js">
+              angular.module('App', ['rui.util.transclude'])
+              .controller('Ctrl',
+                function Ctrl($scope) {
+                    $scope.array = [1,2,3];                  
+                }
+              )
+              .directive('myDirective', function(){
+                return {
+                  transclude: true,
+                  replace: true,
+                  scope: true,
+                  require: ['?ngModel'],
+                  template: '<div><div rui-transclude=".section1"></div><div rui-transclude="[section2]"></div></div>',
+                  link: function(){}
+                }
+              });
+          </file>
+          <file name="index.html">
+              <div ng-controller="Ctrl">           
+                <div my-directive ng-model="blah">
+                  <!-- directive: rui-transclude-class section1 -->
+                  <div ng-repeat="value in array" class="section1">
+                    <span>{{value}}, Section1 uses a class filter and requires a meta tag because of ng-repeat</span>
+                  </div>
+                  <div section2>
+                    Section2 uses an attribute filter
+                  </div>
+                </div>
+              </div>
+          </file>
+      </example>
+  */
   module = angular.module('rui.util.transclude.directives.transclude', ['rui.util.transclude.directives.controllers.transclude']).directive('ruiTransclude', [
     '$timeout',
     function ($timeout) {
@@ -970,22 +1489,29 @@
     'rui.util.transclude.directives.attribute'
   ]);
   util = angular.module('rui.util', ['rui.util.transclude']);
-}.call(this));
+}.call(this));  /*
+//@ sourceMappingURL=rui-concat.js.map
+*/
 angular.module('rui.templates').run(['$templateCache', function($templateCache) {
   'use strict';
 
   $templateCache.put('rui/cardboard/template/rui-card.html',
-    "<div class=rui-card><div class=card-color></div><div class=card-content><span aria-hidden=true class=\"picto icon-defect\" ng-if=\"model.type == 'defect'\"></span><div class=avatar><img class=small ng-src=\"{{ model.avatarUrl }}\"></div><div class=card-owner>{{ model.ownerName }}</div><div class=card-id>{{ model.formattedId }}</div><div class=card-field ng-repeat=\"field in model.fields\">{{ field.value }}</div><div ng-transclude=\"\"></div></div></div>"
+    "<div class=rui-cardboard-card><div class=card-color ng-style=\"{backgroundColor: $card.color}\"></div><div class=card-content ng-transclude=\"\"></div></div>"
+  );
+
+
+  $templateCache.put('rui/cardboard/template/rui-cardboard.html',
+    "<div class=rui-cardboard ng-transclude=\"\"></div>"
   );
 
 
   $templateCache.put('rui/cardboard/template/rui-column-scrollbars.html',
-    "<i class=\"picto icon-small-chevron-left scroll left\" ng-show=model.canScrollLeft ng-click=model.scrollLeft()></i><i class=\"picto icon-small-chevron-right scroll right\" ng-show=model.canScrollRight ng-click=model.scrollRight()></i>"
+    "<i class=\"picto icon-small-chevron-left scroll left\" ng-show=model.canScrollLeft ng-click=model.scrollLeft()></i> <i class=\"picto icon-small-chevron-right scroll right\" ng-show=model.canScrollRight ng-click=model.scrollRight()></i>"
   );
 
 
   $templateCache.put('rui/cardboard/template/rui-column.html',
-    "<div class=rui-column ng-style=\"{width: width}\"></div>"
+    "<div class=rui-cardboard-column ng-style=\"{width: width}\" ng-transclude=\"\"></div>"
   );
 
 

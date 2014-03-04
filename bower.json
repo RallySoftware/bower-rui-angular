@@ -1,6 +1,6 @@
 {
   "name": "rui-angular",
-  "version": "0.0.3",
+  "version": "0.1.1",
   "authors": [
     "Nicholas Boll <nicholas.boll@gmail.com>"
   ],
@@ -14,15 +14,17 @@
     "tests"
   ],
   "dependencies": {
-    "angular": "1.2.1",
-    "angular-resource": "1.2.1",
+    "angular": "1.2.4",
+    "angular-resource": "1.2.4",
     "bootstrap.css": "~2.3.2",
-    "angular-ui-sortable": "~0.0.1",
     "jquery": "~1.10.2",
+    "jquery-ui": ">= 1.9",
     "lodash": "~2.1.0",
     "highcharts": "~3.0.7"
   },
   "devDependencies": {
-    "angular-mocks": "1.2.1"
+    "angular-mocks": "1.2.4",
+    "sinon": "~1.7.3",
+    "jasmine-sinon": "~0.3.1"
   }
 }
