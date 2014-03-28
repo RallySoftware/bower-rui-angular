@@ -1,5 +1,5 @@
 (function() {
-  var CardCtrl, CardboardCtrl, ColumnCtrl, ColumnScrollableCtrl, DropdownCtrl, HighchartsCtrl, HighchartsHtmlCtrl, ItemCtrl, PubSub, TabsetCtrl, ToggleCtrl, TranscludeCtrl, cardboard, column, columnscrollbars, dropdown, highcharts, module, rui, tab, tabset, transclude, util,
+  var CardCtrl, CardboardCtrl, ColumnCtrl, ColumnScrollableCtrl, DropdownCtrl, HighchartsCtrl, HighchartsHtmlCtrl, InputNumberCtrl, InputNumberPercentageCtrl, InputNumberService, ItemCtrl, PubSub, TabsetCtrl, ToggleCtrl, TranscludeCtrl, cardboard, column, columnscrollbars, dropdown, highcharts, module, rui, tab, tabset, transclude, util,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
   cardboard = angular.module('rui.cardboard', ['rui.templates', 'rui.cardboard.directives.cardboard', 'rui.cardboard.directives.column', 'rui.cardboard.directives.card', 'rui.cardboard.directives.columnscrollable', 'rui.cardboard.directives.columnscrollbars', 'rui.cardboard.filters.wip']);
@@ -723,6 +723,282 @@
 
   dropdown = angular.module('rui.dropdown', ['rui.templates', 'rui.dropdown.directives.dropdown', 'rui.dropdown.directives.item']);
 
+  angular.module('rui.forms', ['rui.forms.input']);
+
+  angular.module('rui.forms.input', ['rui.forms.input.number']);
+
+  angular.module('rui.forms.input.number.controllers', ['rui.forms.input.number.controllers.number', 'rui.forms.input.number.controllers.percentage']);
+
+  angular.module('rui.forms.input.number.controllers.number', ['rui.forms.input.number.services.number']).controller('InputNumberCtrl', InputNumberCtrl = (function() {
+    InputNumberCtrl.numericRegEx = /^\s*(\-|\+)?(\d+|(\d*(\.\d*)))\s*$/;
+
+    function InputNumberCtrl($scope, InputNumberService) {
+      var _base;
+      this.$scope = $scope;
+      this.InputNumberService = InputNumberService;
+      this.validate = __bind(this.validate, this);
+      this.parse = __bind(this.parse, this);
+      this.format = __bind(this.format, this);
+      this.step = __bind(this.step, this);
+      this.stepKey = __bind(this.stepKey, this);
+      this.setValue = __bind(this.setValue, this);
+      if ((_base = this.$scope).$inputNumber == null) {
+        _base.$inputNumber = {};
+      }
+      this.$scope.$inputNumber.step = this.step;
+      this.validityKey = 'Numeric';
+    }
+
+    InputNumberCtrl.prototype.setValue = function(value) {
+      this.$scope.$inputNumber.ngModel.$setViewValue(value);
+      return this.$scope.$inputNumber.ngModel.$render();
+    };
+
+    InputNumberCtrl.prototype.stepKey = function(e) {
+      var handler,
+        _this = this;
+      if (e.keyCode === 38) {
+        handler = function() {
+          return _this.step(+1);
+        };
+      }
+      if (e.keyCode === 40) {
+        handler = function() {
+          return _this.step(+(-1));
+        };
+      }
+      if (handler) {
+        return this.$scope.$apply(handler);
+      }
+    };
+
+    InputNumberCtrl.prototype.step = function(upOrDown) {
+      var increment, value, viewValue;
+      if (this.$scope.$inputNumber.isDisabled) {
+        return;
+      }
+      increment = parseFloat(upOrDown * this.$scope.$inputNumber.stepValue);
+      viewValue = parseFloat(this.$scope.$inputNumber.ngModel.$viewValue);
+      if ((viewValue != null) && !isNaN(viewValue)) {
+        value = viewValue + increment;
+        value = _.min([this.$scope.$inputNumber.maxValue, value]);
+        value = _.max([this.$scope.$inputNumber.minValue, value]);
+      } else {
+        value = null;
+      }
+      return this.setValue(value);
+    };
+
+    InputNumberCtrl.prototype.format = function(value) {
+      return this.validate(value);
+    };
+
+    InputNumberCtrl.prototype.parse = function(value) {
+      return this.validate(value);
+    };
+
+    InputNumberCtrl.prototype.validate = function(value) {
+      var isValidNumber, number;
+      isValidNumber = this.InputNumberService.isValidNumber(value);
+      number = this.InputNumberService.toFloat(value);
+      this.$scope.$inputNumber.ngModel.$setValidity(this.validityKey, isValidNumber);
+      if (isValidNumber) {
+        return number;
+      } else {
+        return void 0;
+      }
+    };
+
+    return InputNumberCtrl;
+
+  })());
+
+  angular.module('rui.forms.input.number.controllers.percentage', ['rui.forms.input.number.services.number']).controller('InputNumberPercentageCtrl', InputNumberPercentageCtrl = (function() {
+    function InputNumberPercentageCtrl($scope, InputNumberService) {
+      var _base, _base1;
+      this.$scope = $scope;
+      this.InputNumberService = InputNumberService;
+      this.format = __bind(this.format, this);
+      this.parse = __bind(this.parse, this);
+      this.validate = __bind(this.validate, this);
+      if ((_base = this.$scope).$inputNumber == null) {
+        _base.$inputNumber = {};
+      }
+      if ((_base1 = this.$scope.$inputNumber).precision == null) {
+        _base1.precision = 2;
+      }
+      this.validityKey = 'PercentagePrecision';
+    }
+
+    InputNumberPercentageCtrl.prototype.validate = function(value, precision, formatter) {
+      var asFloat, formatted, isValid;
+      isValid = this.InputNumberService.isValidNumber(value);
+      asFloat = this.InputNumberService.toFloat(value);
+      if (!this.InputNumberService.isWithinPrecision(asFloat, precision)) {
+        isValid = false;
+      }
+      this.$scope.$inputNumber.ngModel.$setValidity(this.validityKey, isValid);
+      if (isValid) {
+        formatted = formatter(value);
+      }
+      if (isValid) {
+        return formatted;
+      } else {
+        return void 0;
+      }
+    };
+
+    InputNumberPercentageCtrl.prototype.parse = function(value) {
+      var _this = this;
+      return this.validate(value, this.$scope.$inputNumber.precision - 2, function(value) {
+        return _this.InputNumberService.toPrecision(value / 100, _this.$scope.$inputNumber.precision);
+      });
+    };
+
+    InputNumberPercentageCtrl.prototype.format = function(value) {
+      var _this = this;
+      return this.validate(value, this.$scope.$inputNumber.precision, function(value) {
+        return _this.InputNumberService.toPrecision(value * 100, _this.$scope.$inputNumber.precision - 2);
+      });
+    };
+
+    return InputNumberPercentageCtrl;
+
+  })());
+
+  angular.module('rui.forms.input.number.directives', ['rui.forms.input.number.directives.number', 'rui.forms.input.number.directives.percentage']);
+
+  angular.module('rui.forms.input.number.directives.number', ['rui.forms.input.number.controllers.number', 'rui.forms.input.number.services.number']).directive('ruiInputNumber', function(InputNumberService) {
+    return {
+      restrict: 'EA',
+      require: ['ruiInputNumber', 'ngModel'],
+      templateUrl: 'rui/forms/input/number/templates/number.html',
+      transclude: 'element',
+      replace: true,
+      scope: true,
+      controller: 'InputNumberCtrl',
+      priority: 999,
+      link: function($scope, $element, $attrs, _arg) {
+        var controller, ngModel, parentNgModel, theInputElement,
+          _this = this;
+        controller = _arg[0], parentNgModel = _arg[1];
+        if ($scope.$inputNumber == null) {
+          $scope.$inputNumber = {};
+        }
+        theInputElement = $('input', $element);
+        theInputElement.keyup(controller.stepKey);
+        ngModel = theInputElement.controller('ngModel');
+        $scope.$inputNumber.ngModel = ngModel;
+        ngModel.$parsers.unshift(controller.parse);
+        ngModel.$formatters.unshift(controller.format);
+        $attrs.$observe('step', function(stepValue) {
+          return $scope.$inputNumber.stepValue = InputNumberService.toInteger(stepValue);
+        });
+        $attrs.$observe('max', function(maxValue) {
+          return $scope.$inputNumber.maxValue = InputNumberService.toInteger(maxValue);
+        });
+        $attrs.$observe('min', function(minValue) {
+          return $scope.$inputNumber.minValue = InputNumberService.toInteger(minValue);
+        });
+        return $scope.$watch(function() {
+          return theInputElement.attr('disabled');
+        }, function(disabledAttr) {
+          return $scope.$inputNumber.isDisabled = disabledAttr === 'disabled';
+        });
+      }
+    };
+  });
+
+  angular.module('rui.forms.input.number.directives.percentage', ['rui.forms.input.number.controllers.percentage', 'rui.forms.input.number.services.number']).directive('ruiInputNumberPercentage', function(InputNumberService) {
+    return {
+      restrict: 'EA',
+      require: ['^ruiInputNumber', 'ruiInputNumberPercentage'],
+      controller: 'InputNumberPercentageCtrl',
+      link: function($scope, $element, $attrs, _arg) {
+        var controller, inputCtrl, ngModel;
+        inputCtrl = _arg[0], controller = _arg[1];
+        $scope.$inputNumber = inputCtrl.$scope.$inputNumber;
+        $attrs.$observe('ruiInputNumberPercentage', function(precision) {
+          return $scope.$inputNumber.precision = InputNumberService.toInteger(precision);
+        });
+        ngModel = $($element, 'input').controller('ngModel');
+        ngModel.$formatters.push(controller.format);
+        return ngModel.$parsers.push(controller.parse);
+      }
+    };
+  });
+
+  angular.module('rui.forms.input.number', ['rui.forms.input.number.directives', 'rui.forms.input.number.controllers', 'rui.forms.input.number.services']);
+
+  angular.module('rui.forms.input.number.services', ['rui.forms.input.number.services.number']);
+
+  angular.module('rui.forms.input.number.services.number', []).service('InputNumberService', InputNumberService = (function() {
+    function InputNumberService() {
+      this.toInteger = __bind(this.toInteger, this);
+      this.toFloat = __bind(this.toFloat, this);
+    }
+
+    InputNumberService.numericRegEx = /^\s*(\-|\+)?(\d+|(\d*(\.\d*)))\s*$/;
+
+    InputNumberService.prototype.isValidNumber = function(number) {
+      var string;
+      if ((number == null) || isNaN(number)) {
+        return false;
+      }
+      string = "" + number;
+      return InputNumberService.numericRegEx.test(number);
+    };
+
+    InputNumberService.prototype.isWithinPrecision = function(number, precision) {
+      var decimal, string, whole, _ref;
+      if ((number == null) || isNaN(number)) {
+        return false;
+      }
+      string = "" + number;
+      _ref = string.split('.'), whole = _ref[0], decimal = _ref[1];
+      if (decimal != null) {
+        return decimal.length <= precision;
+      } else {
+        return true;
+      }
+    };
+
+    InputNumberService.prototype.toFloat = function(number) {
+      return this.toPrecision(number, null);
+    };
+
+    InputNumberService.prototype.toPrecision = function(number, precision) {
+      var decimal, string, whole, _ref;
+      if (precision == null) {
+        precision = null;
+      }
+      if ((number == null) || isNaN(number)) {
+        return NaN;
+      }
+      if (precision == null) {
+        return parseFloat(number);
+      }
+      string = "" + number;
+      _ref = string.split('.'), whole = _ref[0], decimal = _ref[1];
+      if (whole == null) {
+        whole = 0;
+      }
+      if (precision > 0 && (decimal != null)) {
+        decimal = decimal.slice(0, +(precision - 1) + 1 || 9e9);
+        return parseFloat([whole, decimal].join('.'));
+      } else {
+        return parseInt(whole);
+      }
+    };
+
+    InputNumberService.prototype.toInteger = function(number) {
+      return parseInt(number);
+    };
+
+    return InputNumberService;
+
+  })());
+
   angular.module('rui.highcharts.directives.controllers.highcharts', []).controller('HighchartsCtrl', HighchartsCtrl = (function() {
     var events;
 
@@ -1029,7 +1305,7 @@
 
   })());
 
-  rui = angular.module('rui', ['rui.sortable', 'rui.highcharts', 'rui.dropdown', 'rui.tabs', 'rui.util', 'rui.scroll']);
+  rui = angular.module('rui', ['rui.sortable', 'rui.highcharts', 'rui.dropdown', 'rui.tabs', 'rui.util', 'rui.scroll', 'rui.forms']);
 
   angular.module('rui.scroll', ['rui.scroll.when']);
 

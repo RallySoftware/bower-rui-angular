@@ -609,6 +609,197 @@ dropdown = angular.module 'rui.dropdown', [
   'rui.dropdown.directives.dropdown'
   'rui.dropdown.directives.item'
 ]
+angular.module('rui.forms', ['rui.forms.input'])
+
+angular.module('rui.forms.input', ['rui.forms.input.number'])
+
+angular.module('rui.forms.input.number.controllers', [
+	'rui.forms.input.number.controllers.number'
+	'rui.forms.input.number.controllers.percentage'
+	])
+
+angular.module('rui.forms.input.number.controllers.number', ['rui.forms.input.number.services.number']).controller 'InputNumberCtrl',
+	class InputNumberCtrl
+
+		@numericRegEx = /^\s*(\-|\+)?(\d+|(\d*(\.\d*)))\s*$/
+
+		constructor: (@$scope, @InputNumberService) ->
+			@$scope.$inputNumber ?= {}
+			@$scope.$inputNumber.step = @step
+			@validityKey = 'Numeric'
+
+		setValue: (value) =>
+			@$scope.$inputNumber.ngModel.$setViewValue(value)
+			@$scope.$inputNumber.ngModel.$render()
+
+		stepKey: (e)=>
+			if e.keyCode is 38
+				handler = ()=> @step(+1)
+			if e.keyCode is 40
+				handler = ()=> @step(+-1)
+
+			if handler
+				@$scope.$apply(handler)
+			
+		step: (upOrDown) =>
+			if @$scope.$inputNumber.isDisabled then return
+			increment = parseFloat(upOrDown * @$scope.$inputNumber.stepValue)
+			viewValue = parseFloat(@$scope.$inputNumber.ngModel.$viewValue)
+			
+			if viewValue? and not isNaN(viewValue)
+				value = viewValue+increment
+				value = _.min([@$scope.$inputNumber.maxValue, value])
+				value = _.max([@$scope.$inputNumber.minValue, value])
+			else
+				value = null
+			@setValue(value)
+
+		format: (value)=>
+			return @validate(value)
+
+		parse: (value)=>
+			return @validate(value)
+
+		validate: (value) =>
+			isValidNumber = @InputNumberService.isValidNumber(value)
+			number = @InputNumberService.toFloat(value)
+			@$scope.$inputNumber.ngModel.$setValidity(@validityKey, isValidNumber)
+			return if isValidNumber then number else undefined
+
+
+angular.module('rui.forms.input.number.controllers.percentage', ['rui.forms.input.number.services.number']).controller 'InputNumberPercentageCtrl',
+	class InputNumberPercentageCtrl
+		
+		constructor: (@$scope, @InputNumberService)->
+			@$scope.$inputNumber ?= {}
+			@$scope.$inputNumber.precision ?= 2
+			@validityKey = 'PercentagePrecision'
+
+		validate: (value, precision, formatter) =>
+			isValid = @InputNumberService.isValidNumber(value)
+			asFloat = @InputNumberService.toFloat(value)
+			if not @InputNumberService.isWithinPrecision(asFloat, precision) then isValid = false
+			@$scope.$inputNumber.ngModel.$setValidity(@validityKey, isValid)
+			if isValid then formatted = formatter(value)
+			return if isValid then formatted else undefined
+		
+		parse: (value) =>
+			return @validate(value, @$scope.$inputNumber.precision-2, (value)=>
+				return @InputNumberService.toPrecision(value/100, @$scope.$inputNumber.precision)
+				
+			)
+
+		format: (value) =>
+			return @validate(value, @$scope.$inputNumber.precision, (value)=>
+				return @InputNumberService.toPrecision(value*100, @$scope.$inputNumber.precision-2)
+			)
+
+angular.module('rui.forms.input.number.directives', [
+	'rui.forms.input.number.directives.number'
+	'rui.forms.input.number.directives.percentage'
+	])
+
+angular.module('rui.forms.input.number.directives.number', ['rui.forms.input.number.controllers.number', 'rui.forms.input.number.services.number'])
+.directive 'ruiInputNumber', (InputNumberService) ->
+	return {
+		restrict: 'EA'
+		require: ['ruiInputNumber', 'ngModel'] # We expect this directive to be on an <input> with ng-model.
+		templateUrl: 'rui/forms/input/number/templates/number.html'
+		transclude: 'element'
+		replace: true
+		scope: true
+		controller: 'InputNumberCtrl'
+		priority: 999 # The transclusion needs to precede ng-model, ng-disabled, input, etc.
+		link: ($scope, $element, $attrs, [controller, parentNgModel]) ->
+			$scope.$inputNumber ?= {}
+			theInputElement = $('input', $element)
+			theInputElement.keyup(controller.stepKey)
+			
+			ngModel = theInputElement.controller('ngModel')
+			$scope.$inputNumber.ngModel = ngModel
+			
+			ngModel.$parsers.unshift(controller.parse)
+			ngModel.$formatters.unshift(controller.format)
+			
+			# parentNgModel.$parsers = ngModel.$parsers
+			# parentNgModel.$formatters = ngModel.$formatters
+
+			$attrs.$observe 'step', (stepValue) ->
+				$scope.$inputNumber.stepValue = InputNumberService.toInteger(stepValue)
+			$attrs.$observe 'max', (maxValue) ->
+				$scope.$inputNumber.maxValue = InputNumberService.toInteger(maxValue)
+			$attrs.$observe 'min', (minValue) ->
+				$scope.$inputNumber.minValue = InputNumberService.toInteger(minValue)
+
+			$scope.$watch(()->
+					return theInputElement.attr('disabled')
+				,
+				(disabledAttr)=>
+					$scope.$inputNumber.isDisabled = (disabledAttr is 'disabled')
+				)
+	}
+
+angular.module('rui.forms.input.number.directives.percentage', ['rui.forms.input.number.controllers.percentage', 'rui.forms.input.number.services.number'])
+.directive 'ruiInputNumberPercentage', (InputNumberService) ->
+	return {
+		restrict: 'EA'
+		require: ['^ruiInputNumber', 'ruiInputNumberPercentage']
+		controller: 'InputNumberPercentageCtrl'
+		link: ($scope, $element, $attrs, [inputCtrl, controller]) ->
+			$scope.$inputNumber = inputCtrl.$scope.$inputNumber
+			$attrs.$observe('ruiInputNumberPercentage', (precision)->
+				$scope.$inputNumber.precision = InputNumberService.toInteger(precision)
+			)
+			ngModel = $($element, 'input').controller('ngModel')
+			ngModel.$formatters.push controller.format
+			ngModel.$parsers.push controller.parse
+	}
+
+angular.module 'rui.forms.input.number', [
+	'rui.forms.input.number.directives' 
+	'rui.forms.input.number.controllers'
+	'rui.forms.input.number.services'
+]
+
+angular.module 'rui.forms.input.number.services', [
+	'rui.forms.input.number.services.number'
+]
+
+angular.module('rui.forms.input.number.services.number', []).service 'InputNumberService',
+	class InputNumberService
+
+		@numericRegEx = /^\s*(\-|\+)?(\d+|(\d*(\.\d*)))\s*$/
+
+		isValidNumber: (number) ->
+			if not number? or isNaN(number) then return false
+			string = "#{number}"
+			return InputNumberService.numericRegEx.test(number)
+
+		isWithinPrecision: (number, precision) ->
+			if not number? or isNaN(number) then return false
+			string = "#{number}"
+			[whole, decimal] = string.split('.')
+			return if decimal? then decimal.length <= precision else true
+
+		toFloat: (number) =>
+			return @toPrecision(number, null)
+
+		toPrecision: (number, precision=null) ->
+			if not number? or isNaN(number) then return NaN
+			if not precision? then return parseFloat(number)
+			string = "#{number}"
+			[whole, decimal] = string.split('.')
+			whole ?= 0
+			
+			if precision > 0 and decimal?
+				decimal = decimal[0..(precision-1)]
+				return parseFloat([whole, decimal].join('.'))
+			else
+				return parseInt(whole)
+
+		toInteger: (number) =>
+			return parseInt(number)
+
 angular.module('rui.highcharts.directives.controllers.highcharts', [])
 .controller 'HighchartsCtrl',
   class HighchartsCtrl
@@ -905,6 +1096,7 @@ rui = angular.module 'rui', [
 	'rui.tabs'
 	'rui.util'
 	'rui.scroll'
+	'rui.forms'
 ]
 
 angular.module('rui.scroll', ['rui.scroll.when'])
