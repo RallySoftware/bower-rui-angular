@@ -31,6 +31,11 @@ angular.module('rui.templates').run(['$templateCache', function($templateCache) 
   );
 
 
+  $templateCache.put('rui/forms/input/number/templates/number.html',
+    "<div class=rui-input-number><div ng-transclude=\"\" class=rui-input-number-container></div><div class=rui-input-number-spin-btn-container><div ng-click=$inputNumber.step(1) class=\"rui-input-number-spin-btn rui-input-number-spin-btn-up icon-full-arrow-up\"></div><div ng-click=$inputNumber.step(-1) class=\"rui-input-number-spin-btn rui-input-number-spin-btn-down icon-full-arrow-down\"></div></div></div>"
+  );
+
+
   $templateCache.put('rui/highcharts/templates/highcharts.html',
     "<div class=rui-hightcharts><div class=rui-highcharts-container></div><div class=rui-highcharts-html-container></div></div>"
   );

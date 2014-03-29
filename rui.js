@@ -1,9 +1,5 @@
 (function () {
-  var CardCtrl, CardboardCtrl, ColumnCtrl, ColumnScrollableCtrl, DropdownCtrl, HighchartsCtrl, HighchartsHtmlCtrl, ItemCtrl, PubSub, TabsetCtrl, ToggleCtrl, TranscludeCtrl, cardboard, column, columnscrollbars, dropdown, highcharts, module, rui, tab, tabset, transclude, util, __bind = function (fn, me) {
-      return function () {
-        return fn.apply(me, arguments);
-      };
-    };
+  var cardboard;
   cardboard = angular.module('rui.cardboard', [
     'rui.templates',
     'rui.cardboard.directives.cardboard',
@@ -13,6 +9,9 @@
     'rui.cardboard.directives.columnscrollbars',
     'rui.cardboard.filters.wip'
   ]);
+}.call(this));
+(function () {
+  var CardCtrl, module;
   module = angular.module('rui.cardboard.controllers.card', []);
   module.controller('rui.cardboard.controllers.card', CardCtrl = function () {
     CardCtrl.$inject = [
@@ -31,6 +30,9 @@
     }
     return CardCtrl;
   }());
+}.call(this));
+(function () {
+  var CardboardCtrl, module;
   module = angular.module('rui.cardboard.controllers.cardboard', []);
   module.controller('rui.cardboard.controllers.cardboard', CardboardCtrl = function () {
     CardboardCtrl.$inject = ['$timeout'];
@@ -90,6 +92,9 @@
     };
     return CardboardCtrl;
   }());
+}.call(this));
+(function () {
+  var ColumnCtrl, module;
   module = angular.module('rui.cardboard.controllers.column', []);
   module.controller('rui.cardboard.controllers.column', ColumnCtrl = function () {
     function ColumnCtrl() {
@@ -117,6 +122,13 @@
     };
     return ColumnCtrl;
   }());
+}.call(this));
+(function () {
+  var ColumnScrollableCtrl, __bind = function (fn, me) {
+      return function () {
+        return fn.apply(me, arguments);
+      };
+    };
   angular.module('rui.cardboard.controllers.columnscrollable', []).controller('rui.cardboard.controllers.columnscrollable', ColumnScrollableCtrl = function () {
     ColumnScrollableCtrl.prototype.currentIndex = 0;
     ColumnScrollableCtrl.prototype.scrollableColumns = [];
@@ -197,6 +209,9 @@
     };
     return ColumnScrollableCtrl;
   }());
+}.call(this));
+(function () {
+  var module;
   module = angular.module('rui.cardboard.directives.card', [
     'rui.cardboard.directives.column',
     'rui.cardboard.controllers.card'
@@ -270,6 +285,9 @@
       }
     };
   });
+}.call(this));
+(function () {
+  var cardboard;
   cardboard = angular.module('rui.cardboard.directives.cardboard', ['rui.cardboard.controllers.cardboard']);
   /**
   * @ngdoc directive
@@ -371,6 +389,9 @@
       }
     };
   });
+}.call(this));
+(function () {
+  var column;
   column = angular.module('rui.cardboard.directives.column', [
     'rui.cardboard.controllers.column',
     'rui.cardboard.directives.cardboard'
@@ -438,6 +459,9 @@
       }
     };
   });
+}.call(this));
+(function () {
+  var module;
   module = angular.module('rui.cardboard.directives.columnscrollable', ['rui.cardboard.controllers.columnscrollable']);
   /**
   * @ngdoc directive
@@ -455,6 +479,9 @@
       controller: 'rui.cardboard.controllers.columnscrollable'
     };
   });
+}.call(this));
+(function () {
+  var columnscrollbars;
   columnscrollbars = angular.module('rui.cardboard.directives.columnscrollbars', ['rui.cardboard.directives.column']);
   /**
   * @ngdoc directive
@@ -482,6 +509,8 @@
       }
     };
   });
+}.call(this));
+(function () {
   angular.module('rui.cardboard.filters.wip', []).filter('wip', function () {
     return function (input) {
       if (input === 0) {
@@ -491,6 +520,13 @@
       }
     };
   });
+}.call(this));
+(function () {
+  var DropdownCtrl, __bind = function (fn, me) {
+      return function () {
+        return fn.apply(me, arguments);
+      };
+    };
   angular.module('rui.dropdown.directives.controllers.dropdown', []).controller('DropdownCtrl', DropdownCtrl = function () {
     DropdownCtrl.$inject = ['$scope'];
     function DropdownCtrl($scope) {
@@ -524,6 +560,13 @@
     };
     return DropdownCtrl;
   }());
+}.call(this));
+(function () {
+  var ItemCtrl, __bind = function (fn, me) {
+      return function () {
+        return fn.apply(me, arguments);
+      };
+    };
   angular.module('rui.dropdown.directives.controllers.item', []).controller('ItemCtrl', ItemCtrl = function () {
     ItemCtrl.$inject = ['$scope'];
     function ItemCtrl($scope) {
@@ -541,36 +584,39 @@
     };
     return ItemCtrl;
   }());
-  /**
-   * @ngdoc directive
-   * @name rui.dropdown.directives:ruiDropdown
-   * @description
-   * Container for rui dropdown menus
-   * @example
-      <example module="App">
-          <file name="script.js">
-              angular.module('App', ['rui.dropdown'])
-              .controller('Ctrl',
-                function Ctrl($scope) {
-                  $scope.options = [
-                    {name: 'Option1'},
-                    {name: 'Option2'}
-                  ];
-                }
-              );
-          </file>
-          <file name="index.html">
-              <div ng-controller="Ctrl">              
-                <div rui-dropdown ng-model="selectedOption">
-                  <div rui-dropdown-label>{{selectedOption.name}}</div>
-                  <ul rui-dropdown-menu>
-                    <li rui-dropdown-item ng-repeat="option in options" ng-model="option" ng-bind="option.name">
-                  </ul>
-                </div>
+}.call(this));
+/**
+ * @ngdoc directive
+ * @name rui.dropdown.directives:ruiDropdown
+ * @description
+ * Container for rui dropdown menus
+ * @example
+    <example module="App">
+        <file name="script.js">
+            angular.module('App', ['rui.dropdown'])
+            .controller('Ctrl',
+              function Ctrl($scope) {
+                $scope.options = [
+                  {name: 'Option1'},
+                  {name: 'Option2'}
+                ];
+              }
+            );
+        </file>
+        <file name="index.html">
+            <div ng-controller="Ctrl">              
+              <div rui-dropdown ng-model="selectedOption">
+                <div rui-dropdown-label>{{selectedOption.name}}</div>
+                <ul rui-dropdown-menu>
+                  <li rui-dropdown-item ng-repeat="option in options" ng-model="option" ng-bind="option.name">
+                </ul>
               </div>
-          </file>
-      </example>
-  */
+            </div>
+        </file>
+    </example>
+*/
+(function () {
+  var module;
   module = angular.module('rui.dropdown.directives.dropdown', ['rui.dropdown.directives.controllers.dropdown']).directive('ruiDropdown', [function () {
       return {
         restrict: 'EA',
@@ -622,12 +668,15 @@
         }
       };
     }]);
-  /**
-   * @ngdoc directive
-   * @name rui.dropdown.directives:ruiDropdownItem
-   * @description
-   * Denotes a selectable item from the dropdown menu
-  */
+}.call(this));
+/**
+ * @ngdoc directive
+ * @name rui.dropdown.directives:ruiDropdownItem
+ * @description
+ * Denotes a selectable item from the dropdown menu
+*/
+(function () {
+  var dropdown;
   dropdown = angular.module('rui.dropdown.directives.item', ['rui.dropdown.directives.controllers.item']).directive('ruiDropdownItem', [function () {
       return {
         restrict: 'EA',
@@ -664,11 +713,484 @@
         }
       };
     }]);
+}.call(this));
+(function () {
+  var dropdown;
   dropdown = angular.module('rui.dropdown', [
     'rui.templates',
     'rui.dropdown.directives.dropdown',
     'rui.dropdown.directives.item'
   ]);
+}.call(this));
+(function () {
+  angular.module('rui.forms', ['rui.forms.input']);
+}.call(this));
+(function () {
+  angular.module('rui.forms.input', [
+    'rui.forms.input.services',
+    'rui.forms.input.number',
+    'rui.forms.input.pattern'
+  ]);
+}.call(this));
+(function () {
+  angular.module('rui.forms.input.number.controllers', [
+    'rui.forms.input.number.controllers.number',
+    'rui.forms.input.number.controllers.percentage'
+  ]);
+}.call(this));
+(function () {
+  var InputNumberCtrl, __bind = function (fn, me) {
+      return function () {
+        return fn.apply(me, arguments);
+      };
+    };
+  angular.module('rui.forms.input.number.controllers.number', ['rui.forms.input.number.services.number']).controller('InputNumberCtrl', InputNumberCtrl = function () {
+    InputNumberCtrl.numericRegEx = /^\s*(\-|\+)?(\d+|(\d*(\.\d*)))\s*$/;
+    function InputNumberCtrl($scope, $timeout, InputNumberService) {
+      var _base;
+      this.$scope = $scope;
+      this.$timeout = $timeout;
+      this.InputNumberService = InputNumberService;
+      this.validate = __bind(this.validate, this);
+      this.parse = __bind(this.parse, this);
+      this.format = __bind(this.format, this);
+      this.step = __bind(this.step, this);
+      this.stepKey = __bind(this.stepKey, this);
+      this.blur = __bind(this.blur, this);
+      this.setValue = __bind(this.setValue, this);
+      if ((_base = this.$scope).$inputNumber == null) {
+        _base.$inputNumber = {};
+      }
+      this.$scope.$inputNumber.step = this.step;
+      this.validityKey = 'Numeric';
+    }
+    InputNumberCtrl.prototype.setValue = function (value) {
+      this.$scope.$inputNumber.ngModel.$setViewValue(value);
+      return this.$scope.$inputNumber.ngModel.$render();
+    };
+    InputNumberCtrl.prototype.blur = function (e) {
+      var inputValue, target, viewValue, _this = this;
+      viewValue = this.$scope.$inputNumber.ngModel.$viewValue;
+      if (viewValue === '' && this.$scope.$inputNumber.emptyDefault != null) {
+        this.$timeout(function () {
+          return _this.$scope.$apply(function () {
+            return _this.setValue(0);
+          });
+        });
+      }
+      target = $(e.target);
+      inputValue = target.val();
+      if (inputValue.trim() !== inputValue) {
+        return this.$timeout(function () {
+          return _this.$scope.$apply(function () {
+            return target.val(inputValue.trim());
+          });
+        });
+      }
+    };
+    InputNumberCtrl.prototype.stepKey = function (e) {
+      var handler, _this = this;
+      if (e.keyCode === 38) {
+        handler = function () {
+          return _this.step(+1);
+        };
+      }
+      if (e.keyCode === 40) {
+        handler = function () {
+          return _this.step(+-1);
+        };
+      }
+      if (handler) {
+        this.$timeout(function () {
+          return _this.$scope.$apply(handler);
+        });
+        e.preventDefault();
+        return false;
+      }
+      return true;
+    };
+    InputNumberCtrl.prototype.step = function (upOrDown) {
+      var increment, value, viewValue;
+      if (this.$scope.$inputNumber.isDisabled) {
+        return;
+      }
+      increment = parseFloat(upOrDown * this.$scope.$inputNumber.stepValue);
+      viewValue = parseFloat(this.$scope.$inputNumber.ngModel.$viewValue);
+      if (viewValue != null && !isNaN(viewValue)) {
+        value = viewValue + increment;
+        value = _.min([
+          this.$scope.$inputNumber.maxValue,
+          value
+        ]);
+        value = _.max([
+          this.$scope.$inputNumber.minValue,
+          value
+        ]);
+      } else {
+        value = 0;
+        if (upOrDown === 1 && this.$scope.$inputNumber.minValue != null) {
+          value = this.$scope.$inputNumber.minValue;
+        }
+        if (upOrDown === -1 && this.$scope.$inputNumber.maxValue != null) {
+          value = this.$scope.$inputNumber.maxValue;
+        }
+      }
+      return this.setValue(value);
+    };
+    InputNumberCtrl.prototype.format = function (value) {
+      return this.validate(value);
+    };
+    InputNumberCtrl.prototype.parse = function (value) {
+      return this.validate(value);
+    };
+    InputNumberCtrl.prototype.validate = function (value) {
+      var isValidNumber, number;
+      isValidNumber = this.InputNumberService.isValidNumber(value);
+      number = this.InputNumberService.toFloat(value);
+      this.$scope.$inputNumber.ngModel.$setValidity(this.validityKey, isValidNumber);
+      if (isValidNumber) {
+        return number;
+      } else {
+        return void 0;
+      }
+    };
+    return InputNumberCtrl;
+  }());
+}.call(this));
+(function () {
+  var InputNumberPercentageCtrl, __bind = function (fn, me) {
+      return function () {
+        return fn.apply(me, arguments);
+      };
+    };
+  angular.module('rui.forms.input.number.controllers.percentage', ['rui.forms.input.number.services.number']).controller('InputNumberPercentageCtrl', InputNumberPercentageCtrl = function () {
+    function InputNumberPercentageCtrl($scope, InputNumberService) {
+      var _base, _base1;
+      this.$scope = $scope;
+      this.InputNumberService = InputNumberService;
+      this.format = __bind(this.format, this);
+      this.parse = __bind(this.parse, this);
+      this.validate = __bind(this.validate, this);
+      if ((_base = this.$scope).$inputNumber == null) {
+        _base.$inputNumber = {};
+      }
+      if ((_base1 = this.$scope.$inputNumber).precision == null) {
+        _base1.precision = 2;
+      }
+      this.validityKey = 'PercentagePrecision';
+    }
+    InputNumberPercentageCtrl.prototype.validate = function (value, precision, formatter) {
+      var asFloat, formatted, isValid;
+      isValid = this.InputNumberService.isValidNumber(value);
+      asFloat = this.InputNumberService.toFloat(value);
+      if (!this.InputNumberService.isWithinPrecision(asFloat, precision)) {
+        isValid = false;
+      }
+      this.$scope.$inputNumber.ngModel.$setValidity(this.validityKey, isValid);
+      if (isValid) {
+        formatted = formatter(value);
+      }
+      if (isValid) {
+        return formatted;
+      } else {
+        return void 0;
+      }
+    };
+    InputNumberPercentageCtrl.prototype.parse = function (value) {
+      var _this = this;
+      return this.validate(value, this.$scope.$inputNumber.precision - 2, function (value) {
+        return _this.InputNumberService.toPrecision(value / 100, _this.$scope.$inputNumber.precision);
+      });
+    };
+    InputNumberPercentageCtrl.prototype.format = function (value) {
+      var _this = this;
+      return this.validate(value, this.$scope.$inputNumber.precision, function (value) {
+        return _this.InputNumberService.toPrecision(value * 100, _this.$scope.$inputNumber.precision - 2);
+      });
+    };
+    return InputNumberPercentageCtrl;
+  }());
+}.call(this));
+(function () {
+  angular.module('rui.forms.input.number.directives', [
+    'rui.forms.input.number.directives.number',
+    'rui.forms.input.number.directives.percentage'
+  ]);
+}.call(this));
+(function () {
+  angular.module('rui.forms.input.number.directives.number', [
+    'rui.forms.input.services',
+    'rui.forms.input.number.controllers.number',
+    'rui.forms.input.number.services.number'
+  ]).directive('ruiInputNumber', [
+    'InputNumberService',
+    'NgModelHelper',
+    function (InputNumberService, NgModelHelper) {
+      return {
+        restrict: 'EA',
+        require: [
+          'ruiInputNumber',
+          'ngModel'
+        ],
+        templateUrl: 'rui/forms/input/number/templates/number.html',
+        transclude: 'element',
+        replace: true,
+        scope: true,
+        controller: 'InputNumberCtrl',
+        priority: 999,
+        link: function ($scope, $element, $attrs, _arg) {
+          var controller, ngModel, parentNgModel, theInputElement, _this = this;
+          controller = _arg[0], parentNgModel = _arg[1];
+          if ($scope.$inputNumber == null) {
+            $scope.$inputNumber = {};
+          }
+          theInputElement = $('input', $element);
+          theInputElement.keydown(controller.stepKey);
+          theInputElement.blur(controller.blur);
+          ngModel = theInputElement.controller('ngModel');
+          $scope.$inputNumber.ngModel = ngModel;
+          NgModelHelper.orderedValidatorInsert(ngModel.$parsers, controller.parse);
+          NgModelHelper.orderedValidatorInsert(ngModel.$formatters, controller.format);
+          $attrs.$observe('step', function (stepValue) {
+            return $scope.$inputNumber.stepValue = InputNumberService.toInteger(stepValue);
+          });
+          $attrs.$observe('max', function (maxValue) {
+            return $scope.$inputNumber.maxValue = InputNumberService.toInteger(maxValue);
+          });
+          $attrs.$observe('min', function (minValue) {
+            return $scope.$inputNumber.minValue = InputNumberService.toInteger(minValue);
+          });
+          $attrs.$observe('emptyDefault', function (emptyDefault) {
+            return $scope.$inputNumber.emptyDefault = InputNumberService.toFloat(emptyDefault);
+          });
+          return $scope.$watch(function () {
+            return theInputElement.attr('disabled');
+          }, function (disabledAttr) {
+            return $scope.$inputNumber.isDisabled = disabledAttr === 'disabled';
+          });
+        }
+      };
+    }
+  ]);
+}.call(this));
+(function () {
+  angular.module('rui.forms.input.number.directives.percentage', [
+    'rui.forms.input.number.controllers.percentage',
+    'rui.forms.input.number.services.number'
+  ]).directive('ruiInputNumberPercentage', [
+    'InputNumberService',
+    function (InputNumberService) {
+      return {
+        restrict: 'EA',
+        require: [
+          '^ruiInputNumber',
+          'ruiInputNumberPercentage'
+        ],
+        controller: 'InputNumberPercentageCtrl',
+        link: function ($scope, $element, $attrs, _arg) {
+          var controller, inputCtrl, ngModel;
+          inputCtrl = _arg[0], controller = _arg[1];
+          $scope.$inputNumber = inputCtrl.$scope.$inputNumber;
+          $attrs.$observe('ruiInputNumberPercentage', function (precision) {
+            return $scope.$inputNumber.precision = InputNumberService.toInteger(precision);
+          });
+          ngModel = $($element, 'input').controller('ngModel');
+          ngModel.$formatters.push(controller.format);
+          return ngModel.$parsers.push(controller.parse);
+        }
+      };
+    }
+  ]);
+}.call(this));
+(function () {
+  angular.module('rui.forms.input.number', [
+    'rui.forms.input.number.directives',
+    'rui.forms.input.number.controllers',
+    'rui.forms.input.number.services'
+  ]);
+}.call(this));
+(function () {
+  angular.module('rui.forms.input.number.services', ['rui.forms.input.number.services.number']);
+}.call(this));
+(function () {
+  var InputNumberService, __bind = function (fn, me) {
+      return function () {
+        return fn.apply(me, arguments);
+      };
+    };
+  angular.module('rui.forms.input.number.services.number', []).service('InputNumberService', InputNumberService = function () {
+    function InputNumberService() {
+      this.toInteger = __bind(this.toInteger, this);
+      this.toFloat = __bind(this.toFloat, this);
+    }
+    InputNumberService.numericRegEx = /^\s*(\-|\+)?(\d+|(\d*(\.\d*)))\s*$/;
+    InputNumberService.prototype.isValidNumber = function (number) {
+      var string;
+      if (number == null || isNaN(number)) {
+        return false;
+      }
+      string = '' + number;
+      return InputNumberService.numericRegEx.test(number);
+    };
+    InputNumberService.prototype.isWithinPrecision = function (number, precision) {
+      var decimal, string, whole, _ref;
+      if (number == null || isNaN(number)) {
+        return false;
+      }
+      string = '' + number;
+      _ref = string.split('.'), whole = _ref[0], decimal = _ref[1];
+      if (decimal != null) {
+        return decimal.length <= precision;
+      } else {
+        return true;
+      }
+    };
+    InputNumberService.prototype.toFloat = function (number) {
+      return this.toPrecision(number, null);
+    };
+    InputNumberService.prototype.toPrecision = function (number, precision) {
+      var decimal, string, whole, _ref;
+      if (precision == null) {
+        precision = null;
+      }
+      if (number == null || isNaN(number)) {
+        return NaN;
+      }
+      if (precision == null) {
+        return parseFloat(number);
+      }
+      string = '' + number;
+      _ref = string.split('.'), whole = _ref[0], decimal = _ref[1];
+      if (whole == null) {
+        whole = 0;
+      }
+      if (precision > 0 && decimal != null) {
+        decimal = decimal.slice(0, +(precision - 1) + 1 || 9000000000);
+        return parseFloat([
+          whole,
+          decimal
+        ].join('.'));
+      } else {
+        return parseInt(whole);
+      }
+    };
+    InputNumberService.prototype.toInteger = function (number) {
+      return parseInt(number);
+    };
+    return InputNumberService;
+  }());
+}.call(this));
+(function () {
+  angular.module('rui.forms.input.pattern', ['rui.forms.input.pattern.restrict']);
+}.call(this));
+(function () {
+  var InputPatternRestrictCtrl, __bind = function (fn, me) {
+      return function () {
+        return fn.apply(me, arguments);
+      };
+    };
+  angular.module('rui.forms.input.pattern.restrict.controllers.restrict', []).controller('InputPatternRestrictCtrl', InputPatternRestrictCtrl = function () {
+    function InputPatternRestrictCtrl($scope) {
+      var _base;
+      this.$scope = $scope;
+      this.clean = __bind(this.clean, this);
+      this.isValid = __bind(this.isValid, this);
+      this.onViewValueChange = __bind(this.onViewValueChange, this);
+      if ((_base = this.$scope).$inputPattern == null) {
+        _base.$inputPattern = {};
+      }
+      this.$scope.$inputPattern.restrictPattern = /^(.*)$/;
+      this.$scope.$watch('$inputPattern.ngModel.$viewValue', this.onViewValueChange);
+    }
+    InputPatternRestrictCtrl.prototype.onViewValueChange = function (viewValue) {
+      return this.$scope.$inputPattern.history = viewValue;
+    };
+    InputPatternRestrictCtrl.prototype.isValid = function (value) {
+      return this.$scope.$inputPattern.restrictPattern.test(value);
+    };
+    InputPatternRestrictCtrl.prototype.clean = function (value) {
+      var clean, isValid;
+      isValid = this.isValid('' + value);
+      if (isValid) {
+        return value;
+      } else {
+        clean = this.$scope.$inputPattern.history || '';
+        if (value !== clean) {
+          this.$scope.$inputPattern.ngModel.$setViewValue(clean);
+          this.$scope.$inputPattern.ngModel.$render();
+        }
+        return clean;
+      }
+    };
+    return InputPatternRestrictCtrl;
+  }());
+}.call(this));
+(function () {
+  angular.module('rui.forms.input.pattern.restrict.directives.restrict', [
+    'rui.forms.input.services',
+    'rui.forms.input.pattern.restrict.controllers.restrict'
+  ]).directive('ruiInputPatternRestrict', [
+    'NgModelHelper',
+    function (NgModelHelper) {
+      return {
+        restrict: 'A',
+        require: [
+          'ruiInputPatternRestrict',
+          'ngModel'
+        ],
+        controller: 'InputPatternRestrictCtrl',
+        link: function ($scope, $element, $attrs, _arg) {
+          var controller, ngModel, parser;
+          controller = _arg[0], ngModel = _arg[1];
+          $scope.$inputPattern = controller.$scope.$inputPattern;
+          $scope.$inputPattern.ngModel = ngModel;
+          $attrs.$observe('ruiInputPatternRestrict', function (pattern) {
+            return $scope.$inputPattern.restrictPattern = new RegExp(pattern);
+          });
+          parser = controller.clean;
+          parser.order = -100;
+          return NgModelHelper.orderedValidatorInsert(ngModel.$parsers, parser);
+        }
+      };
+    }
+  ]);
+}.call(this));
+(function () {
+  angular.module('rui.forms.input.pattern.restrict', [
+    'rui.forms.input.pattern.restrict.controllers.restrict',
+    'rui.forms.input.pattern.restrict.directives.restrict'
+  ]);
+}.call(this));
+(function () {
+  angular.module('rui.forms.input.services', ['rui.forms.input.services.ngModelHelper']);
+}.call(this));
+(function () {
+  var NgModelHelper;
+  angular.module('rui.forms.input.services.ngModelHelper', ['rui.util.lodash']).service('NgModelHelper', NgModelHelper = function () {
+    function NgModelHelper() {
+    }
+    NgModelHelper.prototype.orderedValidatorInsert = function (validators, toInsert) {
+      var validator, _i, _len;
+      for (_i = 0, _len = validators.length; _i < _len; _i++) {
+        validator = validators[_i];
+        if (validator.order == null) {
+          validator.order = 0;
+        }
+      }
+      if (toInsert.order == null) {
+        toInsert.order = 0;
+      }
+      return _.sortedInsert(validators, toInsert, 'order');
+    };
+    return NgModelHelper;
+  }());
+}.call(this));
+(function () {
+  var HighchartsCtrl, __bind = function (fn, me) {
+      return function () {
+        return fn.apply(me, arguments);
+      };
+    };
   angular.module('rui.highcharts.directives.controllers.highcharts', []).controller('HighchartsCtrl', HighchartsCtrl = function () {
     var events;
     events = [
@@ -739,6 +1261,9 @@
     };
     return HighchartsCtrl;
   }());
+}.call(this));
+(function () {
+  var HighchartsHtmlCtrl;
   angular.module('rui.highcharts.directives.controllers.html', []).controller('HighchartsHtmlCtrl', HighchartsHtmlCtrl = function () {
     HighchartsHtmlCtrl.$inject = ['$scope'];
     function HighchartsHtmlCtrl($scope) {
@@ -747,6 +1272,15 @@
     }
     return HighchartsHtmlCtrl;
   }());
+}.call(this));
+(function () {
+}.call(this));
+(function () {
+  var ToggleCtrl, __bind = function (fn, me) {
+      return function () {
+        return fn.apply(me, arguments);
+      };
+    };
   angular.module('rui.highcharts.directives.controllers.toggle', []).controller('ToggleCtrl', ToggleCtrl = function () {
     ToggleCtrl.$inject = ['$scope'];
     function ToggleCtrl($scope) {
@@ -769,38 +1303,41 @@
     };
     return ToggleCtrl;
   }());
-  /**
-   * @ngdoc directive
-   * @name rui.highcharts.directives:ruiHighcharts
-   * @description
-   * The base for highcharts directives. This creates a new Highcharts.Chart rendered to the directive's template.
-   * @example
-      <example module="App">
-          <file name="script.js">
-              angular.module('App', ['rui.highcharts'])
-              .controller('Ctrl',
-                function Ctrl($scope) {
-                    $scope.highchartsConfig = {
-                      chart: {
-                        type: 'bar'
-                      },
-                      series: [
-                        {
-                          name: 'Year 1800',
-                          data: [107, 31, 635, 203, 2]
-                        }
-                      ]
-                    }
-                }
-              );
-          </file>
-          <file name="index.html">
-              <div ng-controller="Ctrl">              
-                <div rui-highcharts highcharts-config="highchartsConfig"></div>
-              </div>
-          </file>
-      </example>
-  */
+}.call(this));
+/**
+ * @ngdoc directive
+ * @name rui.highcharts.directives:ruiHighcharts
+ * @description
+ * The base for highcharts directives. This creates a new Highcharts.Chart rendered to the directive's template.
+ * @example
+    <example module="App">
+        <file name="script.js">
+            angular.module('App', ['rui.highcharts'])
+            .controller('Ctrl',
+              function Ctrl($scope) {
+                  $scope.highchartsConfig = {
+                    chart: {
+                      type: 'bar'
+                    },
+                    series: [
+                      {
+                        name: 'Year 1800',
+                        data: [107, 31, 635, 203, 2]
+                      }
+                    ]
+                  }
+              }
+            );
+        </file>
+        <file name="index.html">
+            <div ng-controller="Ctrl">              
+              <div rui-highcharts highcharts-config="highchartsConfig"></div>
+            </div>
+        </file>
+    </example>
+*/
+(function () {
+  var highcharts;
   highcharts = angular.module('rui.highcharts.directives.highcharts', [
     'rui.highcharts.directives.controllers.highcharts',
     'rui.highcharts.factories.highcharts'
@@ -834,57 +1371,59 @@
         }
       };
     }]);
-  /**
-   * @ngdoc directive
-   * @name rui.highcharts.directives:ruiHighchartsHtml
-   * @description
-   * The directive adds and absolute positioned html block that can be positioned with ng-style over the chart.
-   * @example
-      <example module="App">
-          <file name="script.js">
-              angular.module('App', ['rui.highcharts'])
-              .controller('Ctrl',
-                function Ctrl($scope) {
-                    $scope.highcharts = {
-                      config: {
-                        chart: {
-                          type: 'bar'
-                        },
-                        series: [
-                          {
-                            name: 'Year 1800',
-                            data: [107, 31, 635, 203, 2]
-                          }
-                        ]
-                      }
-                    };
-                    $scope.overlayStyle = function(){
-                      var top = ($scope.highcharts.chart.chartHeight - 50)
-                      var left = ($scope.highcharts.chart.chartWidth - 100)
-                      var style = {top: top+'px', left: left+'px'}
-                      return style;
-                    };
-                    $scope.toggleSeries = function(){
-                      var series = $scope.highcharts.chart.series[0];
-                      $scope.toggle = !$scope.toggle;
-                      if($scope.toggle) {
-                        series.hide();
-                      } else {
-                        series.show();
-                      }                    
-                    };
-                }
-              );
-          </file>
-          <file name="index.html">
-              <div ng-controller="Ctrl">              
-                <div rui-highcharts highcharts-config="highcharts.config" ng-model="highcharts.chart">
-                  <div rui-highcharts-html ng-style="overlayStyle()" ng-click="toggleSeries()">Toggle Series on/off</div>
-                </div>
+}.call(this));
+/**
+ * @ngdoc directive
+ * @name rui.highcharts.directives:ruiHighchartsHtml
+ * @description
+ * The directive adds and absolute positioned html block that can be positioned with ng-style over the chart.
+ * @example
+    <example module="App">
+        <file name="script.js">
+            angular.module('App', ['rui.highcharts'])
+            .controller('Ctrl',
+              function Ctrl($scope) {
+                  $scope.highcharts = {
+                    config: {
+                      chart: {
+                        type: 'bar'
+                      },
+                      series: [
+                        {
+                          name: 'Year 1800',
+                          data: [107, 31, 635, 203, 2]
+                        }
+                      ]
+                    }
+                  };
+                  $scope.overlayStyle = function(){
+                    var top = ($scope.highcharts.chart.chartHeight - 50)
+                    var left = ($scope.highcharts.chart.chartWidth - 100)
+                    var style = {top: top+'px', left: left+'px'}
+                    return style;
+                  };
+                  $scope.toggleSeries = function(){
+                    var series = $scope.highcharts.chart.series[0];
+                    $scope.toggle = !$scope.toggle;
+                    if($scope.toggle) {
+                      series.hide();
+                    } else {
+                      series.show();
+                    }                    
+                  };
+              }
+            );
+        </file>
+        <file name="index.html">
+            <div ng-controller="Ctrl">              
+              <div rui-highcharts highcharts-config="highcharts.config" ng-model="highcharts.chart">
+                <div rui-highcharts-html ng-style="overlayStyle()" ng-click="toggleSeries()">Toggle Series on/off</div>
               </div>
-          </file>
-      </example>
-  */
+            </div>
+        </file>
+    </example>
+*/
+(function () {
   angular.module('rui.highcharts.directives.html', [
     'rui.highcharts.directives.controllers.highcharts',
     'rui.highcharts.directives.controllers.html'
@@ -905,21 +1444,29 @@
         }
       };
     }]);
-  /**
-   * @ngdoc service
-   * @name rui.highcharts.factories:Highcharts
-   * @description
-   * Returns the global Highcharts module. Allows for decorating or mocking.
-  */
+}.call(this));
+/**
+ * @ngdoc service
+ * @name rui.highcharts.factories:Highcharts
+ * @description
+ * Returns the global Highcharts module. Allows for decorating or mocking.
+*/
+(function () {
+  var highcharts;
   highcharts = angular.module('rui.highcharts.factories.highcharts', []).factory('Highcharts', function () {
     return Highcharts;
   });
+}.call(this));
+(function () {
+  var highcharts;
   highcharts = angular.module('rui.highcharts', [
     'rui.templates',
     'rui.highcharts.directives.highcharts',
     'rui.highcharts.directives.html',
     'rui.highcharts.factories.highcharts'
   ]);
+}.call(this));
+(function () {
   angular.module('rui.quickmenu.directives.quickmenu', []).directive('ruiQuickmenu', function () {
     return {
       restrict: 'EA',
@@ -935,7 +1482,12 @@
       }
     };
   });
+}.call(this));
+(function () {
   angular.module('rui.quickmenu', ['rui.quickmenu.directives.quickmenu']);
+}.call(this));
+(function () {
+  var PubSub;
   angular.module('rui.pubsub', []).service('PubSub', PubSub = function () {
     function PubSub($rootScope) {
       this.$rootScope = $rootScope;
@@ -952,15 +1504,23 @@
     };
     return PubSub;
   }());
+}.call(this));
+(function () {
+  var rui;
   rui = angular.module('rui', [
     'rui.sortable',
     'rui.highcharts',
     'rui.dropdown',
     'rui.tabs',
     'rui.util',
-    'rui.scroll'
+    'rui.scroll',
+    'rui.forms'
   ]);
+}.call(this));
+(function () {
   angular.module('rui.scroll', ['rui.scroll.when']);
+}.call(this));
+(function () {
   angular.module('rui.scroll.when.directives.when', []).directive('ruiScrollWhen', [
     '$timeout',
     function ($timeout) {
@@ -980,7 +1540,12 @@
       };
     }
   ]);
+}.call(this));
+(function () {
   angular.module('rui.scroll.when', ['rui.scroll.when.directives.when']);
+}.call(this));
+(function () {
+  var module;
   module = angular.module('rui.sortable', []);
   module.value('ruiSortableConfig', {});
   /**
@@ -1108,6 +1673,13 @@
       };
     }
   ]);
+}.call(this));
+(function () {
+  var TabsetCtrl, __bind = function (fn, me) {
+      return function () {
+        return fn.apply(me, arguments);
+      };
+    };
   angular.module('rui.tabs.directives.controllers.tab', []).controller('TabCtrl', TabsetCtrl = function () {
     TabsetCtrl.$inject = ['$scope'];
     function TabsetCtrl($scope) {
@@ -1135,6 +1707,13 @@
     };
     return TabsetCtrl;
   }());
+}.call(this));
+(function () {
+  var TabsetCtrl, __bind = function (fn, me) {
+      return function () {
+        return fn.apply(me, arguments);
+      };
+    };
   angular.module('rui.tabs.directives.controllers.tabset', []).controller('TabsetCtrl', TabsetCtrl = function () {
     TabsetCtrl.$inject = [
       '$scope',
@@ -1161,8 +1740,11 @@
     };
     return TabsetCtrl;
   }());
-  /*
-  */
+}.call(this));
+/*
+*/
+(function () {
+  var tab;
   tab = angular.module('rui.tabs.directives.tab', ['rui.tabs.directives.controllers.tab']).directive('ruiTab', [function () {
       return {
         restrict: 'EA',
@@ -1188,8 +1770,11 @@
         }
       };
     }]);
-  /*
-  */
+}.call(this));
+/*
+*/
+(function () {
+  var tab;
   tab = angular.module('rui.tabs.directives.tabContent', []).directive('ruiTabContent', [function () {
       return {
         restrict: 'EA',
@@ -1202,8 +1787,11 @@
         }
       };
     }]);
-  /*
-  */
+}.call(this));
+/*
+*/
+(function () {
+  var tabset;
   tabset = angular.module('rui.tabs.directives.tabHeading', []).directive('ruiTabHeading', [function () {
       return {
         restrict: 'EA',
@@ -1225,50 +1813,53 @@
         }
       };
     }]);
-  /**
-   * @ngdoc directive
-   * @name rui.tabs.directives:ruiTabset
-   * @description
-   * Implementation of bootstrap tabs
-   * @example
-      <example module="App">
-          <file name="script.js">
-              angular.module('App', ['rui.tabs'])
-              .controller('Ctrl',
-                function Ctrl($scope) {
-                    $scope.tabs = [
-                      { name: 'tab1', active: true },
-                      { name: 'tab2', disabled: true },
-                      { name: 'tab3' }
-                    ];
-                    $scope.blah = "blah";
-                    $scope.addTab = function(){
-                      $scope.tabs.push({name:'tab4'});
-                    };
-                    $scope.removeTab = function(){
-                      $scope.tabs.splice(0, 1);
-                    };
-                }
-              );
-          </file>
-          <file name="index.html">
-              <div ng-controller="Ctrl">
-                <div>
-                  <a ng-click="addTab()">Add a tab</a>
-                  <br>
-                  <a ng-click="removeTab()">Remove a tab</a>
-                </div>
-                <div rui-tabset ng-model="selectedTab">
-                  <!-- directive: rui-transclude-class rui-tab -->
-                  <div ng-repeat="tab in tabs" rui-tab ng-model="tab">
-                    <div rui-tab-heading>{{tab.name}}</div>
-                    <div rui-tab-content ng-class="{active: tab.active}">{{tab.name}} - content</div>
-                	</div>
-                </div>
+}.call(this));
+/**
+ * @ngdoc directive
+ * @name rui.tabs.directives:ruiTabset
+ * @description
+ * Implementation of bootstrap tabs
+ * @example
+    <example module="App">
+        <file name="script.js">
+            angular.module('App', ['rui.tabs'])
+            .controller('Ctrl',
+              function Ctrl($scope) {
+                  $scope.tabs = [
+                    { name: 'tab1', active: true },
+                    { name: 'tab2', disabled: true },
+                    { name: 'tab3' }
+                  ];
+                  $scope.blah = "blah";
+                  $scope.addTab = function(){
+                    $scope.tabs.push({name:'tab4'});
+                  };
+                  $scope.removeTab = function(){
+                    $scope.tabs.splice(0, 1);
+                  };
+              }
+            );
+        </file>
+        <file name="index.html">
+            <div ng-controller="Ctrl">
+              <div>
+                <a ng-click="addTab()">Add a tab</a>
+                <br>
+                <a ng-click="removeTab()">Remove a tab</a>
               </div>
-          </file>
-      </example>
-  */
+              <div rui-tabset ng-model="selectedTab">
+                <!-- directive: rui-transclude-class rui-tab -->
+                <div ng-repeat="tab in tabs" rui-tab ng-model="tab">
+                  <div rui-tab-heading>{{tab.name}}</div>
+                  <div rui-tab-content ng-class="{active: tab.active}">{{tab.name}} - content</div>
+              	</div>
+              </div>
+            </div>
+        </file>
+    </example>
+*/
+(function () {
+  var tabset;
   tabset = angular.module('rui.tabs.directives.tabset', ['rui.tabs.directives.controllers.tabset']).directive('ruiTabset', [function () {
       return {
         restrict: 'EA',
@@ -1287,6 +1878,9 @@
         }
       };
     }]);
+}.call(this));
+(function () {
+  var module;
   module = angular.module('rui.tabs', [
     'rui.templates',
     'rui.util.transclude',
@@ -1295,7 +1889,33 @@
     'rui.tabs.directives.tabHeading',
     'rui.tabs.directives.tabContent'
   ]);
+}.call(this));
+(function () {
   angular.module('rui.templates', []);
+}.call(this));
+(function () {
+  angular.module('rui.util.lodash', ['rui.util.lodash.sortedInsert']);
+}.call(this));
+(function () {
+  angular.module('rui.util.lodash.sortedInsert', []).run(function () {
+    _.sortedInsert = function (array, value, pluck) {
+      var index;
+      index = _.sortedIndex(array, value, pluck);
+      array.splice(index, 0, value);
+      return array;
+    };
+    return _.sortedReverseInsert = function (array, value, pluck) {
+      _.sortedInsert(array.reverse(), value, pluck);
+      return array.reverse();
+    };
+  });
+}.call(this));
+(function () {
+  var TranscludeCtrl, __bind = function (fn, me) {
+      return function () {
+        return fn.apply(me, arguments);
+      };
+    };
   angular.module('rui.util.transclude.directives.controllers.transclude', []).controller('TranscludeCtrl', TranscludeCtrl = function () {
     TranscludeCtrl.$inject = [
       '$scope',
@@ -1355,12 +1975,15 @@
     };
     return TranscludeCtrl;
   }());
-  /**
-   * @ngdoc directive
-   * @name rui.utils.transclude.directives:ruiTranscludeAttribute
-   * @description
-   *
-  */
+}.call(this));
+/**
+ * @ngdoc directive
+ * @name rui.utils.transclude.directives:ruiTranscludeAttribute
+ * @description
+ *
+*/
+(function () {
+  var transclude;
   transclude = angular.module('rui.util.transclude.directives.attribute', []).directive('ruiTranscludeAttr', [function () {
       return {
         restrict: 'M',
@@ -1377,16 +2000,19 @@
         }
       };
     }]);
-  /**
-   * @ngdoc directive
-   * @name rui.utils.transclude.directives:ruiTranscludeClass
-   * @description
-   * Similar to ng-transclude, allows specification of jquery selectors for use with multiple transclusion points.
-   * Specify a filter as the rui-transclude attribute value to select what content should be appended into the 
-   * current transclusion point. You can specify 'rui-transclude-optional' to allow for soft transcldes (where
-   * there may be no content to push).
-   *
-  */
+}.call(this));
+/**
+ * @ngdoc directive
+ * @name rui.utils.transclude.directives:ruiTranscludeClass
+ * @description
+ * Similar to ng-transclude, allows specification of jquery selectors for use with multiple transclusion points.
+ * Specify a filter as the rui-transclude attribute value to select what content should be appended into the 
+ * current transclusion point. You can specify 'rui-transclude-optional' to allow for soft transcldes (where
+ * there may be no content to push).
+ *
+*/
+(function () {
+  var transclude;
   transclude = angular.module('rui.util.transclude.directives.class', []).directive('ruiTranscludeClass', [
     '$compile',
     function ($compile) {
@@ -1408,55 +2034,58 @@
       };
     }
   ]);
-  /**
-   * @ngdoc directive
-   * @name rui.utils.transclude.directives:ruiTransclude
-   * @description
-   * Similar to ng-transclude, allows specification of jquery selectors for use with multiple transclusion points.
-   * Specify a filter as the rui-transclude attribute value to select what content should be appended into the 
-   * current transclusion point. You can add the attribute 'rui-transclude-optional' to allow for soft transcludes (where
-   * there may be no content to push).
-   * 
-   * Some angular directives like ng-if and ng-repeat will create html comment nodes at the time of transclusion.
-   * When this is the case, you can use the 'rui-transclude-class' and 'rui-transclude-attr' directives to get these
-   * nodes transcluded. They will be treated specially by the linking function, and the next non-text node will be used
-   * in the transclusion instead.
-   * 
-   * @example
-      <example module="App">
-          <file name="script.js">
-              angular.module('App', ['rui.util.transclude'])
-              .controller('Ctrl',
-                function Ctrl($scope) {
-                    $scope.array = [1,2,3];                  
-                }
-              )
-              .directive('myDirective', function(){
-                return {
-                  transclude: true,
-                  replace: true,
-                  scope: true,
-                  require: ['?ngModel'],
-                  template: '<div><div rui-transclude=".section1"></div><div rui-transclude="[section2]"></div></div>',
-                  link: function(){}
-                }
-              });
-          </file>
-          <file name="index.html">
-              <div ng-controller="Ctrl">           
-                <div my-directive ng-model="blah">
-                  <!-- directive: rui-transclude-class section1 -->
-                  <div ng-repeat="value in array" class="section1">
-                    <span>{{value}}, Section1 uses a class filter and requires a meta tag because of ng-repeat</span>
-                  </div>
-                  <div section2>
-                    Section2 uses an attribute filter
-                  </div>
+}.call(this));
+/**
+ * @ngdoc directive
+ * @name rui.utils.transclude.directives:ruiTransclude
+ * @description
+ * Similar to ng-transclude, allows specification of jquery selectors for use with multiple transclusion points.
+ * Specify a filter as the rui-transclude attribute value to select what content should be appended into the 
+ * current transclusion point. You can add the attribute 'rui-transclude-optional' to allow for soft transcludes (where
+ * there may be no content to push).
+ * 
+ * Some angular directives like ng-if and ng-repeat will create html comment nodes at the time of transclusion.
+ * When this is the case, you can use the 'rui-transclude-class' and 'rui-transclude-attr' directives to get these
+ * nodes transcluded. They will be treated specially by the linking function, and the next non-text node will be used
+ * in the transclusion instead.
+ * 
+ * @example
+    <example module="App">
+        <file name="script.js">
+            angular.module('App', ['rui.util.transclude'])
+            .controller('Ctrl',
+              function Ctrl($scope) {
+                  $scope.array = [1,2,3];                  
+              }
+            )
+            .directive('myDirective', function(){
+              return {
+                transclude: true,
+                replace: true,
+                scope: true,
+                require: ['?ngModel'],
+                template: '<div><div rui-transclude=".section1"></div><div rui-transclude="[section2]"></div></div>',
+                link: function(){}
+              }
+            });
+        </file>
+        <file name="index.html">
+            <div ng-controller="Ctrl">           
+              <div my-directive ng-model="blah">
+                <!-- directive: rui-transclude-class section1 -->
+                <div ng-repeat="value in array" class="section1">
+                  <span>{{value}}, Section1 uses a class filter and requires a meta tag because of ng-repeat</span>
+                </div>
+                <div section2>
+                  Section2 uses an attribute filter
                 </div>
               </div>
-          </file>
-      </example>
-  */
+            </div>
+        </file>
+    </example>
+*/
+(function () {
+  var module;
   module = angular.module('rui.util.transclude.directives.transclude', ['rui.util.transclude.directives.controllers.transclude']).directive('ruiTransclude', [
     '$timeout',
     function ($timeout) {
@@ -1482,16 +2111,23 @@
       };
     }
   ]);
+}.call(this));
+(function () {
+  var transclude;
   transclude = angular.module('rui.util.transclude', [
     'rui.templates',
     'rui.util.transclude.directives.transclude',
     'rui.util.transclude.directives.class',
     'rui.util.transclude.directives.attribute'
   ]);
-  util = angular.module('rui.util', ['rui.util.transclude']);
-}.call(this));  /*
-//@ sourceMappingURL=rui-concat.js.map
-*/
+}.call(this));
+(function () {
+  var util;
+  util = angular.module('rui.util', [
+    'rui.util.transclude',
+    'rui.util.lodash'
+  ]);
+}.call(this));
 angular.module('rui.templates').run(['$templateCache', function($templateCache) {
   'use strict';
 
@@ -1522,6 +2158,11 @@ angular.module('rui.templates').run(['$templateCache', function($templateCache) 
 
   $templateCache.put('rui/dropdown/templates/dropdown.html',
     "<div ng-class=\"{open: $dropdown.isOpen}\" class=dropdown-container><div ng-click=$dropdown.toggleOpen() class=\"field dropdown\"><span class=rui-dropdown-label-container></span><span ng-click=$dropdown.toggle() class=\"icons icon-chevron-down\"></span></div></div>"
+  );
+
+
+  $templateCache.put('rui/forms/input/number/templates/number.html',
+    "<div class=rui-input-number><div ng-transclude=\"\" class=rui-input-number-container></div><div class=rui-input-number-spin-btn-container><div ng-click=$inputNumber.step(1) class=\"rui-input-number-spin-btn rui-input-number-spin-btn-up icon-full-arrow-up\"></div><div ng-click=$inputNumber.step(-1) class=\"rui-input-number-spin-btn rui-input-number-spin-btn-down icon-full-arrow-down\"></div></div></div>"
   );
 
 
