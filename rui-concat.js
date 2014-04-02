@@ -833,6 +833,9 @@
       this.step = __bind(this.step, this);
       this.stepKey = __bind(this.stepKey, this);
       this.blur = __bind(this.blur, this);
+      this.blurCheckLeadingZeros = __bind(this.blurCheckLeadingZeros, this);
+      this.blurCheckTrim = __bind(this.blurCheckTrim, this);
+      this.blurCheckEmpty = __bind(this.blurCheckEmpty, this);
       this.setValue = __bind(this.setValue, this);
       if ((_base = this.$scope).$inputNumber == null) {
         _base.$inputNumber = {};
@@ -846,26 +849,45 @@
       return this.$scope.$inputNumber.ngModel.$render();
     };
 
-    InputNumberCtrl.prototype.blur = function(e) {
-      var inputValue, target, viewValue,
+    InputNumberCtrl.prototype.blurCheckEmpty = function(e) {
+      var viewValue,
         _this = this;
       viewValue = this.$scope.$inputNumber.ngModel.$viewValue;
       if (viewValue === '' && (this.$scope.$inputNumber.emptyDefault != null)) {
-        this.$timeout(function() {
-          return _this.$scope.$apply(function() {
-            return _this.setValue(0);
-          });
+        return this.$scope.$apply(function() {
+          return _this.setValue(_this.$scope.$inputNumber.emptyDefault);
         });
       }
+    };
+
+    InputNumberCtrl.prototype.blurCheckTrim = function(e) {
+      var inputValue, target,
+        _this = this;
       target = $(e.target);
       inputValue = target.val();
       if (inputValue.trim() !== inputValue) {
-        return this.$timeout(function() {
-          return _this.$scope.$apply(function() {
-            return target.val(inputValue.trim());
-          });
+        return this.$scope.$apply(function() {
+          return target.val(inputValue.trim());
         });
       }
+    };
+
+    InputNumberCtrl.prototype.blurCheckLeadingZeros = function(e) {
+      var trimmed, viewValue,
+        _this = this;
+      viewValue = "" + this.$scope.$inputNumber.ngModel.$viewValue;
+      if (viewValue.indexOf('0') === 0) {
+        trimmed = ("" + viewValue).replace(/^(-)?0+(?=\d)/, "$1");
+        return this.$scope.$apply(function() {
+          return _this.setValue(trimmed);
+        });
+      }
+    };
+
+    InputNumberCtrl.prototype.blur = function(e) {
+      this.blurCheckEmpty(e);
+      this.blurCheckTrim(e);
+      return this.blurCheckLeadingZeros(e);
     };
 
     InputNumberCtrl.prototype.stepKey = function(e) {
@@ -1025,7 +1047,7 @@
         theInputElement = $('input', $element);
         theInputElement.keydown(controller.stepKey);
         theInputElement.blur(controller.blur);
-        ngModel = theInputElement.controller('ngModel');
+        ngModel = angular.element(theInputElement).controller('ngModel');
         $scope.$inputNumber.ngModel = ngModel;
         NgModelHelper.orderedValidatorInsert(ngModel.$parsers, controller.parse);
         NgModelHelper.orderedValidatorInsert(ngModel.$formatters, controller.format);
@@ -1053,7 +1075,7 @@
 }).call(this);
 
 (function() {
-  angular.module('rui.forms.input.number.directives.percentage', ['rui.forms.input.number.controllers.percentage', 'rui.forms.input.number.services.number']).directive('ruiInputNumberPercentage', function(InputNumberService) {
+  angular.module('rui.forms.input.number.directives.percentage', ['rui.forms.input.number.controllers.percentage', 'rui.forms.input.number.services.number', 'rui.forms.input.number.directives.number']).directive('ruiInputNumberPercentage', function(InputNumberService) {
     return {
       restrict: 'EA',
       require: ['^ruiInputNumber', 'ruiInputNumberPercentage'],
@@ -1065,7 +1087,7 @@
         $attrs.$observe('ruiInputNumberPercentage', function(precision) {
           return $scope.$inputNumber.precision = InputNumberService.toInteger(precision);
         });
-        ngModel = $($element, 'input').controller('ngModel');
+        ngModel = angular.element($($element, 'input')).controller('ngModel');
         ngModel.$formatters.push(controller.format);
         return ngModel.$parsers.push(controller.parse);
       }
