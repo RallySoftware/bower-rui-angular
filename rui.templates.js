@@ -61,6 +61,21 @@ angular.module('rui.templates').run(['$templateCache', function($templateCache) 
   );
 
 
+  $templateCache.put('rui/tree/templates/content.html',
+    "<div class=rui-tree-node-content><span ng-bind=$ruiTreeNode.node.name></span></div>"
+  );
+
+
+  $templateCache.put('rui/tree/templates/node.html',
+    "<li class=rui-tree-node><div rui-tree-node-content=rui-tree-node-content></div><div class=rui-tree-node-sub-tree-placeholder></div></li>"
+  );
+
+
+  $templateCache.put('rui/tree/templates/tree.html',
+    "<ul class=rui-tree><div ng-transclude=ng-transclude class=templates></div><li ng-repeat=\"$node in $ruiTree.root.children\" rui-tree-node=rui-tree-node class=rui-tree-nodes></li></ul>"
+  );
+
+
   $templateCache.put('rui/util/transclude/templates/transclude-meta.html',
     "<div class=rui-transclude-meta></div>"
   );

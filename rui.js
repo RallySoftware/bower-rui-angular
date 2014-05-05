@@ -1912,6 +1912,310 @@
   angular.module('rui.templates', []);
 }.call(this));
 (function () {
+  var RuiTreeCtrl, __bind = function (fn, me) {
+      return function () {
+        return fn.apply(me, arguments);
+      };
+    };
+  angular.module('rui.tree.controllers.tree', ['rui.util.lodash']).controller('RuiTreeCtrl', RuiTreeCtrl = function () {
+    function RuiTreeCtrl($scope) {
+      this.$scope = $scope;
+      this.updateRoot = __bind(this.updateRoot, this);
+      this.$scope.$ruiTree = {};
+    }
+    RuiTreeCtrl.prototype.updateRoot = function (root) {
+      if (root == null) {
+        root = [];
+      }
+      if (_.isArray(root)) {
+        root = { children: root };
+      }
+      if (root.children == null) {
+        root.children = [];
+      }
+      return this.$scope.$ruiTree.root = root;
+    };
+    return RuiTreeCtrl;
+  }());
+}.call(this));
+(function () {
+  var RuiTreeNodeCtrl, __bind = function (fn, me) {
+      return function () {
+        return fn.apply(me, arguments);
+      };
+    };
+  angular.module('rui.tree.controllers.node', ['rui.util.lodash']).controller('RuiTreeNodeCtrl', RuiTreeNodeCtrl = function () {
+    function RuiTreeNodeCtrl($scope) {
+      this.$scope = $scope;
+      this.watchChildren = __bind(this.watchChildren, this);
+      this.setSubTreePlaceholder = __bind(this.setSubTreePlaceholder, this);
+      this.$scope.$ruiTreeNode = {};
+      this.$scope.$watch('$ruiTreeNode.node.children', this.watchChildren, this.$scope.$ruiTree.deepWatch);
+    }
+    RuiTreeNodeCtrl.prototype.setSubTreePlaceholder = function (subTreePlaceholder) {
+      this.subTreePlaceholder = subTreePlaceholder;
+    };
+    RuiTreeNodeCtrl.prototype.watchChildren = function (children) {
+      return this.$scope.$ruiTreeNode.showChildren = (children != null ? children.length : void 0) > 0;
+    };
+    return RuiTreeNodeCtrl;
+  }());
+}.call(this));
+(function () {
+  angular.module('rui.tree.controllers', [
+    'rui.tree.controllers.tree',
+    'rui.tree.controllers.node'
+  ]);
+}.call(this));
+/**
+ * @ngdoc directive
+ * @name rui.tree.directives:ruiTreeNodeContent
+ * @description
+ * Used to define how to render the text content of a node. This should generally be the node display info and
+ * not include any wrapper stuff like stub-trees or expand/collapse.
+*/
+(function () {
+  angular.module('rui.tree.directives.content', [
+    'rui.templates',
+    'rui.util.template'
+  ]).directive('ruiTreeNodeContent', [
+    '$parse',
+    '$compile',
+    function ($parse, $compile) {
+      return {
+        restrict: 'EA',
+        require: ['?^ruiTemplates'],
+        scope: false,
+        templateUrl: 'rui/tree/templates/content.html',
+        replace: true,
+        ruiTemplate: true,
+        link: function () {
+        }
+      };
+    }
+  ]);
+}.call(this));
+(function () {
+  angular.module('rui.tree.directives', [
+    'rui.tree.directives.tree',
+    'rui.tree.directives.node',
+    'rui.tree.directives.content',
+    'rui.tree.directives.nodeSubTreePlaceholder'
+  ]);
+}.call(this));
+/**
+ * @ngdoc directive
+ * @name rui.tree.directives:ruiTreeNode
+ * @description
+ * Used to define how to render a complete node (not just its content). A node includes all expand/collapse and subtree elements.
+ * A node will need to specify a placeholder for the insertion of a sub 'rui-tree' for its children. See 'rui-tree-node-sub-tree-placeholder' directive.
+ *
+ * Uses '$scope.$ruiTreeNode.showChildren' to determine whether a sub tree should be compiled and placed in the DOM. Customizations can watch and modify this.
+*/
+(function () {
+  angular.module('rui.tree.directives.node', [
+    'rui.templates',
+    'rui.util.template',
+    'rui.tree.controllers.node'
+  ]).constant('RuiTreeNodePlaceHolderWarning', '$ruiTreeNode has children but template doesn\'t define a subtree placeholder with \'rui-tree-node-sub-tree-placeholder\'. No sub-tree will be displayed.').directive('ruiTreeNode', [
+    '$compile',
+    '$log',
+    'RuiTreeNodePlaceHolderWarning',
+    function ($compile, $log, RuiTreeNodePlaceHolderWarning) {
+      return {
+        restrict: 'EA',
+        require: [
+          'ruiTreeNode',
+          '^ruiTree',
+          '?^ruiTemplates'
+        ],
+        scope: true,
+        templateUrl: 'rui/tree/templates/node.html',
+        replace: true,
+        controller: 'RuiTreeNodeCtrl',
+        ruiTemplate: true,
+        link: function ($scope, $element, $attrs, _arg) {
+          var controller, subTree, templates, treeController;
+          controller = _arg[0], treeController = _arg[1], templates = _arg[2];
+          subTree = null;
+          $scope.$watch('$node', function (node) {
+            return $scope.$ruiTreeNode.node = node;
+          });
+          return $scope.$watch('$ruiTreeNode.showChildren', function (showChildren) {
+            var subTreePlaceholder, _ref, _ref1;
+            subTreePlaceholder = controller.subTreePlaceholder;
+            if (showChildren && subTree == null) {
+              if (subTreePlaceholder == null) {
+                $log.warn(RuiTreeNodePlaceHolderWarning);
+              }
+              return $compile('<ul class="rui-tree-node-subtree" rui-tree="$ruiTreeNode.node"/>')($scope.$new(), function (node, scope) {
+                node.insertAfter(controller.subTreePlaceholder);
+                return subTree = {
+                  node: node,
+                  scope: scope
+                };
+              });
+            } else {
+              if (subTree != null) {
+                if ((_ref = subTree.node) != null) {
+                  _ref.remove();
+                }
+              }
+              if (subTree != null) {
+                if ((_ref1 = subTree.scope) != null) {
+                  _ref1.$destroy();
+                }
+              }
+              return subTree = null;
+            }
+          });
+        }
+      };
+    }
+  ]);
+}.call(this));
+/**
+ * @ngdoc directive
+ * @name rui.tree.directives:ruiTreeNodeSubTreePlaceholder
+ * @description
+ * Registers the directive's element with the tree node as a placeholder for insertion of
+ * a nested sub tree. This is compatible as a class-based directive. Simply put a node with
+ * this class somewhere in your template and a sub-tree will be placed just after it.
+*/
+(function () {
+  angular.module('rui.tree.directives.nodeSubTreePlaceholder', []).directive('ruiTreeNodeSubTreePlaceholder', [
+    '$compile',
+    function ($compile) {
+      return {
+        restrict: 'EAC',
+        require: ['^ruiTreeNode'],
+        scope: false,
+        compile: function ($element) {
+          $element.css({ display: 'none' });
+          return {
+            pre: function ($scope, $element, $attrs, _arg) {
+              var nodeController;
+              nodeController = _arg[0];
+              return nodeController.setSubTreePlaceholder($element);
+            }
+          };
+        }
+      };
+    }
+  ]);
+}.call(this));
+/**
+ * @ngdoc directive
+ * @name rui.tree.directives:ruiTree
+ * @description
+ * Renders a tree view
+ * @example
+		<example module="App">
+				<file name="script.js">
+						angular.module('App', ['rui.tree'])
+						.controller('Ctrl',
+							function Ctrl($scope, $filter) {
+								$scope.nodes = [
+									{name: 'A', children: [{name: 'A1', children:[{name: 'A1a'}]},{name: 'A2'}]},
+									{name: 'B'}
+								]
+							}
+						);
+				</file>
+				<file name="index.html">
+						<div ng-controller="Ctrl">
+
+							<h3>Default</h3>
+							<ul rui-tree="nodes" />
+							
+							<h3>With Custom Tree And Node Templates</h3>
+							<div rui-templates>
+								<div rui-template name="rui-tree">
+									<ul class="custom-tree">
+										<li ng-if="!$ruiTree.level">Before first level nodes</li>
+										<li class="custom-node" ng-repeat="$node in $ruiTree.root.children" 
+											rui-tree-node />
+										<li ng-if="!$ruiTree.level">After first level nodes</li>
+									</ul>
+								</div>
+								<div rui-template name="rui-tree-node">
+									<li class="my-custom-node-type">
+										<div rui-tree-node-content />
+										<div>  | ^ level: {{$ruiTree.level}} </div>
+										<div class="rui-tree-node-sub-tree-placeholder"/>
+									</li>
+								</div>
+								<div rui-template name="rui-tree-node-content">
+									<div class="my-custom-content">- {{$ruiTreeNode.node.name}} </div>
+								</div>										
+								<ul rui-tree="nodes"/>
+							</div>
+
+							<h3>With Custom Node Template</h3>
+							<ul rui-tree="nodes" rui-templates>
+								<div rui-template name="rui-tree-node">
+									<li class="my-custom-node-type">
+										<div>name: {{$ruiTreeNode.node.name}} 
+											level: {{$ruiTree.level}} 
+											parent: {{$ruiTree.root.name || 'none'}} 
+											# of children: {{$ruiTreeNode.node.children.length}} 
+											scope id: {{$id}}</div>
+										<div class="rui-tree-node-sub-tree-placeholder"/>
+									</li>
+								</div>
+								
+							</ul>
+							
+							<h3>With Custom Content Template</h3>
+							<ul rui-tree="nodes" rui-templates>
+								<div rui-template name="rui-tree-node-content">
+									<div class="custom-content">Node Name: 
+										{{$ruiTreeNode.node.name}}</div>
+								</div>
+							</ul>
+
+						</div>
+				</file>
+		</example>
+*/
+(function () {
+  angular.module('rui.tree.directives.tree', [
+    'rui.templates',
+    'rui.util.template',
+    'rui.tree.controllers.tree'
+  ]).directive('ruiTree', function () {
+    return {
+      restrict: 'EA',
+      require: ['ruiTree'],
+      templateUrl: 'rui/tree/templates/tree.html',
+      scope: true,
+      replace: true,
+      transclude: true,
+      controller: 'RuiTreeCtrl',
+      terminal: true,
+      ruiTemplate: true,
+      link: function ($scope, $element, $attrs, _arg) {
+        var controller, _ref;
+        controller = _arg[0];
+        $scope.$ruiTree.deepWatch = $attrs['ruiTreeDeepWatch'] ? $scope.$eval($attrs['ruiTreeDeepWatch']) : false;
+        $scope.$ruiTree.level = 0;
+        if (((_ref = $scope.$parent) != null ? _ref.$ruiTree : void 0) != null) {
+          $scope.$ruiTree.level = $scope.$parent.$ruiTree.level + 1;
+        }
+        return $scope.$watch($attrs.ruiTree, controller.updateRoot, true);
+      }
+    };
+  });
+}.call(this));
+(function () {
+  angular.module('rui.tree', [
+    'rui.templates',
+    'rui.util.template',
+    'rui.tree.directives',
+    'rui.tree.controllers'
+  ]);
+}.call(this));
+(function () {
   angular.module('rui.util.lodash', ['rui.util.lodash.sortedInsert']);
 }.call(this));
 (function () {
@@ -1927,6 +2231,377 @@
       return array.reverse();
     };
   });
+}.call(this));
+(function () {
+  var RuiTemplateConfigurationHelper, __bind = function (fn, me) {
+      return function () {
+        return fn.apply(me, arguments);
+      };
+    }, __slice = [].slice;
+  angular.module('rui.util.template.config.helper', ['rui.util.lodash']).constant('ruiTemplateConfigurationHelper', new (RuiTemplateConfigurationHelper = function () {
+    function RuiTemplateConfigurationHelper() {
+      this.wrapDirectiveFactory = __bind(this.wrapDirectiveFactory, this);
+      this.toDash = __bind(this.toDash, this);
+      this.DIRECTIVE_REGEX = /Directive$/;
+      this.CAMEL_REGEXP = /([a-z])([A-Z])/g;
+    }
+    RuiTemplateConfigurationHelper.prototype.toDash = function (directiveName) {
+      return directiveName.replace(this.CAMEL_REGEXP, '$1-$2').toLowerCase();
+    };
+    /*
+    	Instruments directive definitions with 'ruiTemplate' defined by wrapping compile/link to support templating.
+    */
+    RuiTemplateConfigurationHelper.prototype.wrapDirective = function (directive) {
+      if (directive.ruiTemplate) {
+        if (directive.ruiTemplate === true) {
+          directive.ruiTemplate = this.toDash(directive.name);
+        }
+        directive.compile = this.wrapCompile(directive.compile, directive.ruiTemplate);
+        if (directive.link) {
+          directive.link = this.wrapLink(directive, directive.ruiTemplate);
+        }
+      }
+      return directive;
+    };
+    /*
+    	Wrap a directive compile function to ng-if default content and potentially wrap a returned link def
+    */
+    RuiTemplateConfigurationHelper.prototype.wrapCompile = function (compileFn, templateName) {
+      var self;
+      if (compileFn == null) {
+        compileFn = _.identity;
+      }
+      self = this;
+      return _.wrap(compileFn, function () {
+        var $element, args, compileFn, compiled;
+        compileFn = arguments[0], $element = arguments[1], args = 3 <= arguments.length ? __slice.call(arguments, 2) : [];
+        $element.children().attr('ng-if', '!$ruiTemplate');
+        compiled = compileFn.call.apply(compileFn, [
+          this,
+          $element
+        ].concat(__slice.call(args)));
+        if (self.isLinkFn(compiled) || self.isLinkObject(compiled)) {
+          compiled = self.wrapLink(compiled, templateName);
+        }
+        return compiled;
+      });
+    };
+    RuiTemplateConfigurationHelper.prototype.isLinkFn = function (def) {
+      return _.isFunction(def);
+    };
+    RuiTemplateConfigurationHelper.prototype.isLinkObject = function (def) {
+      return _.isObject(def) && (this.isLinkFn(def.pre) || this.isLinkFn(def.post));
+    };
+    /*
+    	Wrap a link definition with our pre-link instrumentation
+    */
+    RuiTemplateConfigurationHelper.prototype.wrapLink = function (linkDefinition, templateName) {
+      var post, pre;
+      if (_.isFunction(linkDefinition)) {
+        pre = this.wrapLinkFn(templateName);
+        post = linkDefinition;
+        linkDefinition = {
+          pre: pre,
+          post: post
+        };
+      } else if (_.isObject(linkDefinition)) {
+        linkDefinition.pre = this.wrapLinkFn(templateName, linkDefinition.pre);
+      }
+      return linkDefinition;
+    };
+    /*
+    	Instruments link functions to first replace content with dynamic templates by invoking an in-scope
+    	template container controller.
+    */
+    RuiTemplateConfigurationHelper.prototype.wrapLinkFn = function (templateName, linkFn) {
+      if (linkFn == null) {
+        linkFn = _.identity;
+      }
+      return _.wrap(linkFn, function () {
+        var $attrs, $element, $scope, args, linkFn, templates;
+        linkFn = arguments[0], $scope = arguments[1], $element = arguments[2], $attrs = arguments[3], args = 5 <= arguments.length ? __slice.call(arguments, 4) : [];
+        templates = $element.inheritedData('$ruiTemplatesController');
+        if (templates != null) {
+          templates.replaceWithIfDefined(templateName, $scope, $element, $attrs);
+        }
+        return linkFn.call.apply(linkFn, [
+          this,
+          $scope,
+          $element,
+          $attrs
+        ].concat(__slice.call(args)));
+      });
+    };
+    /*
+    	Part of wrapping directive declarations by modifying their factory functions.
+    */
+    RuiTemplateConfigurationHelper.prototype.wrapDirectiveFactory = function (directiveFactory, context) {
+      var self;
+      self = this;
+      return _.wrap(directiveFactory, function () {
+        var args, directives, factory;
+        factory = arguments[0], args = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
+        directives = factory.call.apply(factory, [context].concat(__slice.call(args)));
+        _.each(directives, function (directive) {
+          return self.wrapDirective(directive);
+        });
+        return directives;
+      });
+    };
+    /*
+    	Instrument $provide to identify and wrap all directives.
+    	Note: this is closely tied to the implementation in
+    		angular.module().directive
+    */
+    RuiTemplateConfigurationHelper.prototype.wrapProvideFactory = function (provideFactory) {
+      var self;
+      self = this;
+      return _.wrap(provideFactory, function () {
+        var args, factoryArray, factoryIndex, func, name;
+        func = arguments[0], name = arguments[1], args = 3 <= arguments.length ? __slice.call(arguments, 2) : [];
+        if (self.DIRECTIVE_REGEX.test(name)) {
+          factoryArray = args[0];
+          factoryIndex = factoryArray.length - 1;
+          factoryArray[factoryIndex] = self.wrapDirectiveFactory(factoryArray[factoryIndex], this);
+        }
+        return func.call.apply(func, [
+          this,
+          name
+        ].concat(__slice.call(args)));
+      });
+    };
+    return RuiTemplateConfigurationHelper;
+  }())());
+}.call(this));
+/*
+Required by the 'rui.util.template' module, this will instrument directive definitions to wrap them with
+compile and link functions that support dynamic template overrides.
+
+Based on angular source...
+Wraps $provide.factory to search for factory definitions defined as '*Directive'. Then wraps the resulting
+definitions with checks for the 'ruiTemplate'. If this is defined it will add/wrap compile and link steps to swap
+content with a potential dynamic template as the first step at pre-link time.
+*/
+(function () {
+  angular.module('rui.util.template.config', [
+    'rui.util.lodash',
+    'rui.util.template.config.helper'
+  ]).config([
+    '$provide',
+    'ruiTemplateConfigurationHelper',
+    function ($provide, ruiTemplateConfigurationHelper) {
+      var helper;
+      helper = ruiTemplateConfigurationHelper;
+      return $provide.factory = helper.wrapProvideFactory($provide.factory);
+    }
+  ]);
+}.call(this));
+/*
+The controller for 'ruiTemplates' collects all template definitions in this container. Directives that specify
+'ruiTemplate' in their definition will make use of the collected dynamic templates by requiring and using
+this controller to merge the template on to their element.
+*/
+(function () {
+  var RuiTemplateContainerCtrl, __bind = function (fn, me) {
+      return function () {
+        return fn.apply(me, arguments);
+      };
+    };
+  angular.module('rui.util.template.controllers.templateContainer', []).controller('RuiTemplateContainerCtrl', RuiTemplateContainerCtrl = function () {
+    function RuiTemplateContainerCtrl($scope, $compile) {
+      this.$scope = $scope;
+      this.$compile = $compile;
+      this.replaceWithIfDefined = __bind(this.replaceWithIfDefined, this);
+      this.replaceWith = __bind(this.replaceWith, this);
+      this.hasTemplate = __bind(this.hasTemplate, this);
+      this.name = 'RuiTemplateContainerCtrl';
+      this.templates = [];
+    }
+    RuiTemplateContainerCtrl.prototype.hasTemplate = function (name) {
+      return !!this.templates[name];
+    };
+    RuiTemplateContainerCtrl.prototype.attributes = function ($element) {
+      return $element[0].attributes || [];
+    };
+    RuiTemplateContainerCtrl.prototype.classes = function ($element) {
+      var _ref;
+      return ((_ref = $element.attr('class')) != null ? _ref.split(/\s+/) : void 0) || [];
+    };
+    RuiTemplateContainerCtrl.prototype.getTemplate = function (name) {
+      return $(this.templates[name].html);
+    };
+    /*
+    		Replaces an elements content by compiling the template and binding to the scope. Copies over all classes
+    		and attributes from the template.
+    */
+    RuiTemplateContainerCtrl.prototype.replaceWith = function (name, $scope, $element, $attrs) {
+      var $template, $templateAttributes, $templateClasses;
+      $template = this.getTemplate(name);
+      $templateAttributes = this.attributes($template);
+      $templateClasses = this.classes($template);
+      _($templateAttributes).reject({ name: 'class' }).each(function (_arg) {
+        var name, value;
+        name = _arg.name, value = _arg.value;
+        return $attrs.$set(name, value);
+      });
+      _.each($templateClasses, function (className) {
+        return $element.addClass(className);
+      });
+      $element.empty();
+      $template.contents().appendTo($element);
+      this.$compile($element.contents())($scope);
+      return $element;
+    };
+    /*
+    		If a template is defined, call to replace the contents. Sets 'ruiTemplate' to true/false on the scope.
+    */
+    RuiTemplateContainerCtrl.prototype.replaceWithIfDefined = function (name, $scope, $element, $attrs) {
+      if (this.hasTemplate(name)) {
+        $scope.$ruiTemplate = true;
+        return this.replaceWith.apply(this, arguments);
+      } else {
+        return $scope.$ruiTemplate = false;
+      }
+    };
+    return RuiTemplateContainerCtrl;
+  }());
+}.call(this));
+(function () {
+  angular.module('rui.util.template.controllers', ['rui.util.template.controllers.templateContainer']);
+}.call(this));
+(function () {
+  angular.module('rui.util.template.directives', [
+    'rui.util.template.directives.template',
+    'rui.util.template.directives.templateContainer'
+  ]);
+}.call(this));
+/**
+ * @ngdoc directive
+ * @name rui.util.template.directives:ruiTemplate
+ * @description
+ * Registers an element as a dynamic template. Content of this element should have a root node which
+ * will be interpreted like a directive template. The 'ruiTemplates' directive should be used in conjunction with
+ * this directive to provide a context/scoping container for template definitions.
+ * All attributes and classes of this node as well as
+ * contents will be copied on to a directive that uses your template.
+ *
+ * @example
+		<example module="App">
+				<file name="script.js">
+						angular.module('App', ['rui.util.template'])
+						.controller('Ctrl',
+							function Ctrl($scope, $filter) {
+								$scope.defaultProperty = "defaultProperty";
+								$scope.anotherProperty = "overriden";
+							}
+						)
+						.directive('myCustomizableDirective', function(){
+							return {
+								scope: true,
+								replace: true,
+								template: '<div><span ng-bind="defaultProperty" /></div>',
+								ruiTemplate: true,
+								link: function(){}
+							}
+						})
+						.directive('anotherCustomizableDirective', function(){
+							return {
+								scope: true,
+								replace: true,
+								template: '<div><span ng-bind="defaultProperty" /></div>',
+								ruiTemplate: 'my-custom-template',
+								link: function(){}
+							}
+						});
+				</file>
+				<file name="index.html">
+						<div ng-controller="Ctrl">
+
+							<h3>Default</h3>
+							<div my-customizable-directive />
+
+							<h3>Template Overriden</h3>
+							<div rui-templates>
+								<div rui-template name="my-customizable-directive">
+									<div><span>{{anotherProperty}}</span></div>
+								</div>
+								<div my-customizable-directive />
+							</div>
+
+							<h3>Directive with named template</h3>
+							<div rui-templates>
+								<div rui-template name="my-custom-template">
+									<div>I totally did something unique here</div>
+								</div>
+								<div another-customizable-directive />
+							</div>
+
+						</div>
+				</file>
+		</example>
+*/
+(function () {
+  angular.module('rui.util.template.directives.template', []).directive('ruiTemplate', [
+    '$parse',
+    '$compile',
+    function ($parse, $compile) {
+      return {
+        restrict: 'EA',
+        require: ['^ruiTemplates'],
+        scope: true,
+        compile: function ($element, $attrs) {
+          var html, name;
+          name = $attrs.name;
+          if (!name) {
+            throw new Error('rui-template must have a name attribute');
+          }
+          html = $element.html().trim();
+          $element.empty();
+          return {
+            pre: function ($scope, $element, $attrs, _arg) {
+              var containerController;
+              containerController = _arg[0];
+              $element.remove();
+              $scope.$destroy();
+              return containerController.templates[name] = { html: html };
+            }
+          };
+        }
+      };
+    }
+  ]);
+}.call(this));
+/**
+ * @ngdoc directive
+ * @name rui.util.template.directives:ruiTemplates
+ * @description
+ * Registers a relative container for all 'ruiTemplate' definitions underneath it. Templates will collect and be defined
+ * at this level for all components underneath that are making use of them.
+ *
+*/
+(function () {
+  angular.module('rui.util.template.directives.templateContainer', ['rui.util.template.controllers.templateContainer']).directive('ruiTemplates', [
+    '$parse',
+    '$compile',
+    function ($parse, $compile) {
+      return {
+        restrict: 'EAC',
+        scope: false,
+        controller: 'RuiTemplateContainerCtrl',
+        priority: 99999,
+        link: function () {
+        }
+      };
+    }
+  ]);
+}.call(this));
+(function () {
+  angular.module('rui.util.template', [
+    'rui.util.template.config',
+    'rui.util.template.controllers',
+    'rui.util.template.directives',
+    'rui.util.lodash'
+  ]);
 }.call(this));
 (function () {
   var TranscludeCtrl, __bind = function (fn, me) {
@@ -2143,6 +2818,7 @@
   var util;
   util = angular.module('rui.util', [
     'rui.util.transclude',
+    'rui.util.template',
     'rui.util.lodash'
   ]);
 }.call(this));
@@ -2206,6 +2882,21 @@ angular.module('rui.templates').run(['$templateCache', function($templateCache) 
 
   $templateCache.put('rui/tabs/templates/tabset.html',
     "<div class=rui-tabset><ul class=\"nav nav-tabs\"></ul><div class=tab-content></div><div rui-transclude=\".rui-tab, [rui-tab]\" class=\"tabs meta\"></div></div>"
+  );
+
+
+  $templateCache.put('rui/tree/templates/content.html',
+    "<div class=rui-tree-node-content><span ng-bind=$ruiTreeNode.node.name></span></div>"
+  );
+
+
+  $templateCache.put('rui/tree/templates/node.html',
+    "<li class=rui-tree-node><div rui-tree-node-content=rui-tree-node-content></div><div class=rui-tree-node-sub-tree-placeholder></div></li>"
+  );
+
+
+  $templateCache.put('rui/tree/templates/tree.html',
+    "<ul class=rui-tree><div ng-transclude=ng-transclude class=templates></div><li ng-repeat=\"$node in $ruiTree.root.children\" rui-tree-node=rui-tree-node class=rui-tree-nodes></li></ul>"
   );
 
 
