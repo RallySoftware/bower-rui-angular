@@ -1,4 +1,916 @@
 (function() {
+  angular.module('rui.alm', ['rui.alm.projectPicker', 'rui.alm.services']);
+
+}).call(this);
+
+(function() {
+  var RuiAlmProjectPickerCtrl,
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+
+  angular.module('rui.alm.projectPicker.controllers.projectPicker', ['rui.alm.projectPicker.factories.treeSearch']).controller('RuiAlmProjectPickerCtrl', RuiAlmProjectPickerCtrl = (function() {
+    function RuiAlmProjectPickerCtrl($scope, $timeout, ruiAlmProjectPickerTreeSearchFactory, $log, $q) {
+      this.$scope = $scope;
+      this.$timeout = $timeout;
+      this.ruiAlmProjectPickerTreeSearchFactory = ruiAlmProjectPickerTreeSearchFactory;
+      this.$log = $log;
+      this.$q = $q;
+      this.search = __bind(this.search, this);
+      this.clearSearch = __bind(this.clearSearch, this);
+      this.watchSelectedNode = __bind(this.watchSelectedNode, this);
+      this.selectNode = __bind(this.selectNode, this);
+      this.setDropdownIsOpen = __bind(this.setDropdownIsOpen, this);
+      this.focusOut = __bind(this.focusOut, this);
+      this.toggleDropdown = __bind(this.toggleDropdown, this);
+      this.updateWorkspaces = __bind(this.updateWorkspaces, this);
+      this.getNodeState = __bind(this.getNodeState, this);
+      this.selectedPath = [];
+      this.parentIndex = {};
+      this.nodeIndex = {};
+      this.$scope.$ruiAlmProjectPicker = {
+        dropdownIsOpen: false,
+        useDropdown: true,
+        toggleDropdown: this.toggleDropdown,
+        onBlur: this.onBlur,
+        _nodeState: {},
+        getNodeState: this.getNodeState,
+        selectNode: this.selectNode,
+        selectNodeByOid: this.selectNodeByOid,
+        clearSearch: this.clearSearch
+      };
+      this.$scope.$watch('$ruiAlmProjectPicker.selectedNode', this.watchSelectedNode);
+      this.$scope.$watch('$ruiAlmProjectPicker.searchTerm', this.search);
+    }
+
+    RuiAlmProjectPickerCtrl.prototype.getNodeState = function(node) {
+      var oid, state;
+      oid = node.oid != null ? node.oid : node;
+      oid = "" + oid;
+      state = this.$scope.$ruiAlmProjectPicker._nodeState[oid];
+      if (state == null) {
+        state = {};
+      }
+      return this.$scope.$ruiAlmProjectPicker._nodeState[oid] = state;
+    };
+
+    RuiAlmProjectPickerCtrl.prototype.updateWorkspaces = function(workspaces) {
+      var index,
+        _this = this;
+      this.$scope.$ruiAlmProjectPicker.workspaces = workspaces;
+      index = function(node) {
+        _this.nodeIndex[node.oid] = node;
+        return _.each(node.children, function(child) {
+          _this.parentIndex[child.oid] = node;
+          return index(child);
+        });
+      };
+      this.$log.debug('Project picker indexing nodes');
+      _.each(workspaces, index);
+      this.selectNode(this.$scope.$ruiAlmProjectPicker.selectedNode);
+      this.search(this.$scope.$ruiAlmProjectPicker.searchTerm);
+      this.$log.debug('Project picker indexing finished');
+      return this.$q.when();
+    };
+
+    RuiAlmProjectPickerCtrl.prototype.toggleDropdown = function($event) {
+      return this.$scope.$ruiAlmProjectPicker.dropdownIsOpen = !this.$scope.$ruiAlmProjectPicker.dropdownIsOpen;
+    };
+
+    RuiAlmProjectPickerCtrl.prototype.focusOut = function($event, $projectPickerElement) {
+      var _this = this;
+      return this.$timeout(function() {
+        var activeIsInPicker;
+        activeIsInPicker = $.contains($projectPickerElement[0], document.activeElement);
+        return _this.$scope.$ruiAlmProjectPicker.dropdownIsOpen = activeIsInPicker;
+      });
+    };
+
+    RuiAlmProjectPickerCtrl.prototype.setDropdownIsOpen = function(value) {
+      return this.$scope.$ruiAlmProjectPicker.dropdownIsOpen = value;
+    };
+
+    RuiAlmProjectPickerCtrl.prototype.selectNode = function(node) {
+      var bubbleSelection,
+        _this = this;
+      _.each(this.selectedPath, function(selectedNode) {
+        var state;
+        state = _this.getNodeState(selectedNode);
+        state.selected = false;
+        state.inSelectPath = false;
+      });
+      this.selectedPath = [];
+      if (node != null) {
+        this.getNodeState(node).selected = true;
+        bubbleSelection = function(toBubble) {
+          var bubbleState;
+          _this.selectedPath.push(toBubble);
+          bubbleState = _this.getNodeState(toBubble);
+          bubbleState.inSelectPath = true;
+          if (_this.parentIndex[toBubble.oid]) {
+            return bubbleSelection(_this.parentIndex[toBubble.oid]);
+          }
+        };
+        bubbleSelection(node);
+      }
+      return this.$scope.$ruiAlmProjectPicker.selectedNode = this.nodeIndex[node != null ? node.oid : void 0] != null ? this.nodeIndex[node.oid] : node;
+    };
+
+    RuiAlmProjectPickerCtrl.prototype.watchSelectedNode = function(node) {
+      return this.$scope.$ruiAlmProjectPicker.triggerText = (node != null ? node.name : void 0) ? node.name : '[no project selected]';
+    };
+
+    RuiAlmProjectPickerCtrl.prototype.clearSearch = function() {
+      return this.$scope.$ruiAlmProjectPicker.searchTerm = '';
+    };
+
+    RuiAlmProjectPickerCtrl.prototype.search = function(term) {
+      var mySearch, _ref,
+        _this = this;
+      this.$scope.$ruiAlmProjectPicker.isSearching = !!term;
+      if ((_ref = this.currentSearch) != null) {
+        if (typeof _ref.cancel === "function") {
+          _ref.cancel();
+        }
+      }
+      if (term) {
+        this.$scope.$ruiAlmProjectPicker.searchInProgress = true;
+        mySearch = this.currentSearch = this.ruiAlmProjectPickerTreeSearchFactory(term, this);
+        return this.currentSearch.search({
+          children: this.$scope.$ruiAlmProjectPicker.workspaces
+        }, 1000)['finally'](function(state) {
+          if (mySearch === _this.currentSearch) {
+            return _this.$scope.$ruiAlmProjectPicker.searchInProgress = false;
+          }
+        });
+      }
+    };
+
+    return RuiAlmProjectPickerCtrl;
+
+  })());
+
+}).call(this);
+
+(function() {
+  var RuiAlmProjectPickerNodeCtrl,
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+
+  angular.module('rui.alm.projectPicker.controllers.projectPickerNode', []).controller('RuiAlmProjectPickerNodeCtrl', RuiAlmProjectPickerNodeCtrl = (function() {
+    function RuiAlmProjectPickerNodeCtrl($scope, $compile) {
+      this.$scope = $scope;
+      this.$compile = $compile;
+      this.selectNode = __bind(this.selectNode, this);
+      this.watchSelection = __bind(this.watchSelection, this);
+      this.watchChildrenAndSearchToShowSubTree = __bind(this.watchChildrenAndSearchToShowSubTree, this);
+      this.watchSearchAndMatch = __bind(this.watchSearchAndMatch, this);
+      this.watchChildrenAndExpand = __bind(this.watchChildrenAndExpand, this);
+      this.toggleExpand = __bind(this.toggleExpand, this);
+      this.getState = __bind(this.getState, this);
+      this.getNode = __bind(this.getNode, this);
+      this.watchOidAndUpdateState = __bind(this.watchOidAndUpdateState, this);
+      this.subTreeTemplate = '<ul class="rui-tree-node-subtree" rui-alm-project-picker-tree="$ruiTreeNode.node" ng-show="$ruiTreeNode.showChildren"/>';
+      this.$scope.$ruiAlmProjectPickerNode = {
+        toggleExpand: this.toggleExpand,
+        state: null,
+        selectNode: this.selectNode
+      };
+      this.$scope.$watch('$ruiTreeNode.node.oid', this.watchOidAndUpdateState);
+      this.$scope.$watch('$ruiAlmProjectPickerNode.toggleDisabled', this.watchChildrenAndExpand);
+      this.$scope.$watch('$ruiTreeNode.hasChildren', this.watchChildrenAndExpand);
+      this.$scope.$watch('$ruiAlmProjectPickerNode.state.expand', this.watchChildrenAndExpand);
+      this.$scope.$watch('$ruiAlmProjectPickerNode.state.inSearchMatchPath', this.watchSearchAndMatch);
+      this.$scope.$watch('$ruiAlmProjectPicker.isSearching', this.watchSearchAndMatch);
+      this.$scope.$watch('$ruiTreeNode.showChildren', this.watchChildrenAndSearchToShowSubTree);
+      this.$scope.$watch('$ruiAlmProjectPickerNode.hasChildrenAndExpanded', this.watchChildrenAndSearchToShowSubTree);
+      this.$scope.$watch('$ruiAlmProjectPickerNode.inSearchAndMatch', this.watchChildrenAndSearchToShowSubTree);
+      this.$scope.$watch('$ruiAlmProjectPickerNode.state.selected', this.watchSelection);
+      this.$scope.$watch('$ruiAlmProjectPickerNode.state.inSelectPath', this.watchSelection);
+    }
+
+    RuiAlmProjectPickerNodeCtrl.prototype.watchOidAndUpdateState = function(oid) {
+      if (oid) {
+        return this.$scope.$ruiAlmProjectPickerNode.state = this.$scope.$ruiAlmProjectPicker.getNodeState(oid);
+      }
+    };
+
+    RuiAlmProjectPickerNodeCtrl.prototype.getNode = function() {
+      return this.$scope.$ruiTreeNode.node;
+    };
+
+    RuiAlmProjectPickerNodeCtrl.prototype.getState = function() {
+      return this.$scope.$ruiAlmProjectPickerNode.state;
+    };
+
+    RuiAlmProjectPickerNodeCtrl.prototype.toggleExpand = function() {
+      var state;
+      if (this.$scope.$ruiAlmProjectPickerNode.toggleDisabled) {
+        return;
+      }
+      state = this.getState();
+      return state.expand = !state.expand;
+    };
+
+    RuiAlmProjectPickerNodeCtrl.prototype.watchChildrenAndExpand = function() {
+      var canCollapse, canExpand, canToggleExpand, expanded, hasChildren, hasChildrenAndExpanded, _ref;
+      hasChildren = this.$scope.$ruiTreeNode.hasChildren;
+      expanded = (_ref = this.$scope.$ruiAlmProjectPickerNode.state) != null ? _ref.expand : void 0;
+      hasChildrenAndExpanded = this.$scope.$ruiAlmProjectPickerNode.hasChildrenAndExpanded = hasChildren && expanded;
+      canExpand = this.$scope.$ruiAlmProjectPickerNode.canExpand = hasChildren && !expanded;
+      canCollapse = this.$scope.$ruiAlmProjectPickerNode.canCollapse = hasChildren && expanded;
+      return canToggleExpand = this.$scope.$ruiAlmProjectPickerNode.canToggleExpand = canExpand || canCollapse;
+    };
+
+    RuiAlmProjectPickerNodeCtrl.prototype.watchSearchAndMatch = function() {
+      var inSearchMatchPath, isSearching, _ref;
+      inSearchMatchPath = (_ref = this.$scope.$ruiAlmProjectPickerNode.state) != null ? _ref.inSearchMatchPath : void 0;
+      isSearching = this.$scope.$ruiAlmProjectPicker.isSearching;
+      this.$scope.$ruiAlmProjectPickerNode.inSearchAndMatch = isSearching && inSearchMatchPath;
+      return this.$scope.$ruiAlmProjectPickerNode.showNode = isSearching ? inSearchMatchPath : true;
+    };
+
+    RuiAlmProjectPickerNodeCtrl.prototype.watchChildrenAndSearchToShowSubTree = function() {
+      var hasChildrenAndExpanded, inSearchAndMatch;
+      hasChildrenAndExpanded = this.$scope.$ruiAlmProjectPickerNode.hasChildrenAndExpanded;
+      inSearchAndMatch = this.$scope.$ruiAlmProjectPickerNode.inSearchAndMatch;
+      return this.$scope.$ruiTreeNode.showChildren = hasChildrenAndExpanded || inSearchAndMatch;
+    };
+
+    RuiAlmProjectPickerNodeCtrl.prototype.watchSelection = function() {
+      var state;
+      state = this.getState();
+      if (state != null) {
+        if (state.inSelectPath && !state.selected) {
+          state.expand = true;
+        }
+        return this.$scope.$ruiAlmProjectPickerNode.toggleDisabled = state.inSelectPath && !state.selected;
+      }
+    };
+
+    RuiAlmProjectPickerNodeCtrl.prototype.selectNode = function() {
+      var node;
+      node = this.getNode();
+      this.$scope.$ruiAlmProjectPicker.selectNode(node);
+      return this.$scope.$ruiAlmProjectPicker.dropdownIsOpen = false;
+    };
+
+    return RuiAlmProjectPickerNodeCtrl;
+
+  })());
+
+}).call(this);
+
+(function() {
+  angular.module('rui.alm.projectPicker.controllers', ['rui.alm.projectPicker.controllers.projectPicker', 'rui.alm.projectPicker.controllers.projectPickerNode']);
+
+}).call(this);
+
+(function() {
+  angular.module('rui.alm.projectPicker.directives', ['rui.alm.projectPicker.directives.projectPicker', 'rui.alm.projectPicker.directives.projectPickerNode', 'rui.alm.projectPicker.directives.projectPickerTree']);
+
+}).call(this);
+
+/**
+ * @ngdoc directive
+ * @name rui.alm.projectPicker:ruiAlmProjectPicker
+ * @description
+ * A project picker
+ * @example
+		<example module="App">
+				<file name="script.js">
+						angular.module('App', ['rui.alm.projectPicker'])
+						.controller('Ctrl',
+							function Ctrl($scope, $filter) { 
+								$scope.workspaces = [
+									{oid: 'A', name: 'WorkspaceA', isWorkspace: true, children: [{oid: 'A.1', name: 'Project A.1', children:[{oid: 'A.1.a', name: 'Project A.1.a'}]},{oid: 'A.1.b', name: 'Project A.1.b'}]},
+									{oid: 'B', name: 'WorkspaceB', isWorkspace: true}
+								]								
+							}
+						);
+				</file>
+				<file name="index.html">
+						<div ng-controller="Ctrl">
+
+							<h3>Default</h3>
+							<div rui-alm-project-picker="workspaces" rui-project-picker-open="true" />
+
+						</div>
+				</file>
+		</example>
+*/
+
+
+(function() {
+  angular.module('rui.alm.projectPicker.directives.projectPicker', ['rui.templates', 'rui.util.bootstrap', 'rui.util.template', 'rui.tree', 'rui.alm.projectPicker.controllers.projectPicker', 'rui.alm.projectPicker.factories.treeBuilder', 'rui.util.element.directives.focusMe']).directive('ruiAlmProjectPickerCtrl', function($parse, ruiAlmProjectPickerTreeBuilder) {
+    return {
+      restrict: 'EA',
+      require: ['ruiAlmProjectPickerCtrl'],
+      scope: true,
+      controller: 'RuiAlmProjectPickerCtrl',
+      ruiTemplate: true,
+      link: function($scope, $element, $attrs, _arg) {
+        var controller, expression,
+          _this = this;
+        controller = _arg[0];
+        $element.focusout(function($event) {
+          return $scope.$apply(function() {
+            return controller.focusOut($event, $element);
+          });
+        });
+        if ($attrs.ruiAlmProjectPickerRoot) {
+          $scope.$watch($attrs.ruiAlmProjectPickerRoot, function(workspaces) {
+            return controller.updateWorkspaces(workspaces);
+          });
+        } else {
+          $scope.$ruiAlmProjectPicker.isLoading = true;
+          ruiAlmProjectPickerTreeBuilder.getWorkspaces().then(controller.updateWorkspaces)['finally'](function() {
+            return $scope.$ruiAlmProjectPicker.isLoading = false;
+          });
+        }
+        if ($attrs.ruiAlmProjectPickerOpen != null) {
+          $scope.$watch($parse($attrs.ruiAlmProjectPickerOpen), controller.setDropdownIsOpen);
+        }
+        if ($attrs.ruiAlmProjectPickerStartExpanded != null) {
+          $scope.$watch($parse($attrs.ruiAlmProjectPickerStartExpanded), function(expanded) {
+            return $scope.$ruiAlmProjectPicker.startExpanded = expanded;
+          });
+        }
+        if ($attrs.ruiAlmProjectPickerSelected != null) {
+          expression = $parse($attrs.ruiAlmProjectPickerSelected);
+          $scope.$watch('$ruiAlmProjectPicker.selectedNode', function(node) {
+            return expression.assign($scope, node);
+          });
+          $scope.$watch(expression, controller.selectNode);
+        }
+        if ($attrs.ruiAlmProjectPickerThrottleSubTree) {
+          $scope.$ruiAlmProjectPicker.throttleSubTree = $scope.$eval($attrs.ruiAlmProjectPickerThrottleSubTree);
+        }
+        if ($attrs.ruiAlmProjectPickerEagerBuild) {
+          return $scope.$ruiAlmProjectPicker.eagerBuild = $scope.$eval($attrs.ruiAlmProjectPickerEagerBuild);
+        }
+      }
+    };
+  }).directive('ruiAlmProjectPicker', function() {
+    return {
+      replace: true,
+      templateUrl: 'rui/alm/projectPicker/templates/projectPicker.html',
+      compile: function($element, $attrs) {
+        return $attrs.$set('ruiAlmProjectPickerRoot', $attrs.ruiAlmProjectPicker);
+      }
+    };
+  });
+
+}).call(this);
+
+(function() {
+  angular.module('rui.alm.projectPicker.directives.projectPickerNode', ['rui.alm.projectPicker.controllers.projectPickerNode', 'rui.tree']).directive('ruiAlmProjectPickerNodeCtrl', function() {
+    return {
+      restrict: 'A',
+      scope: true,
+      require: ['ruiAlmProjectPickerNodeCtrl', 'ruiTreeNodeCtrl'],
+      controller: 'RuiAlmProjectPickerNodeCtrl',
+      link: function($scope, $element, $attrs, _arg) {
+        var controller, treeNodeController;
+        controller = _arg[0], treeNodeController = _arg[1];
+        return treeNodeController.subTreeTemplate = controller.subTreeTemplate;
+      }
+    };
+  }).directive('ruiAlmProjectPickerNode', function() {
+    return {
+      restrict: 'EA',
+      replace: true,
+      templateUrl: 'rui/alm/projectPicker/templates/projectPickerNode.html',
+      require: ['ruiAlmProjectPickerNodeCtrl'],
+      compile: function($element, $attrs) {
+        $attrs.$set('ruiTreeNodeRoot', $attrs.ruiAlmProjectPickerNode);
+        return function() {};
+      }
+    };
+  });
+
+}).call(this);
+
+(function() {
+  angular.module('rui.alm.projectPicker.directives.projectPickerTree', ['rui.tree']).directive('ruiAlmProjectPickerTreeCtrl', function() {
+    return {
+      restrict: 'A',
+      scope: true,
+      link: function($scope, $element, $attrs) {}
+    };
+  }).directive('ruiAlmProjectPickerTree', function() {
+    return {
+      restrict: 'EA',
+      replace: true,
+      templateUrl: 'rui/alm/projectPicker/templates/projectPickerTree.html',
+      compile: function($element, $attrs) {
+        $attrs.$set('ruiTreeRoot', $attrs.ruiAlmProjectPickerTree);
+        return function() {};
+      }
+    };
+  });
+
+}).call(this);
+
+(function() {
+  angular.module('rui.alm.projectPicker.factories', ['rui.alm.projectPicker.factories.treeBuilder', 'rui.alm.projectPicker.factories.treeSearch']);
+
+}).call(this);
+
+/**
+ * @ngdoc service
+ * @name rui.alm.projectPicker:ruiAlmProjectPickerTreeBuilder
+ * @description
+ * Factory that returns a builder to query wsapi/slm.
+ * This will query the stateful ALM endpoints for getting tree data, but will not
+*/
+
+
+(function() {
+  var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+    __slice = [].slice;
+
+  angular.module('rui.alm.projectPicker.factories.treeBuilder', ['rui.alm.services.wsapi', 'rui.util.cache', 'rui.util.lodash', 'rui.util.async']).factory('ruiAlmProjectPickerTreeBuilderFactory', function($cacheFactory, $injector, async) {
+    var RuiAlmProjectPickerTreeBuilder, defaultCache, factory;
+    defaultCache = $cacheFactory('ruiAlmProjectPickerTree');
+    RuiAlmProjectPickerTreeBuilder = RuiAlmProjectPickerTreeBuilder = (function() {
+      RuiAlmProjectPickerTreeBuilder.CACHE_KEY = '$tree';
+
+      function RuiAlmProjectPickerTreeBuilder(cache, $slm, $wsapi, $log, $cacheWrap, $q, $rootScope, $http) {
+        this.cache = cache;
+        this.$slm = $slm;
+        this.$wsapi = $wsapi;
+        this.$log = $log;
+        this.$cacheWrap = $cacheWrap;
+        this.$q = $q;
+        this.$rootScope = $rootScope;
+        this.$http = $http;
+        this._onError = __bind(this._onError, this);
+        this._setSelectedProject = __bind(this._setSelectedProject, this);
+        this._findSelectedProject = __bind(this._findSelectedProject, this);
+        this._eachProjectInTree = __bind(this._eachProjectInTree, this);
+        this._fetchSelectedProject = __bind(this._fetchSelectedProject, this);
+        this._fetchProjectsForWorkspaceUsingOidAndSetCurrentOid = __bind(this._fetchProjectsForWorkspaceUsingOidAndSetCurrentOid, this);
+        this._findAProjectOidInAWorkspace = __bind(this._findAProjectOidInAWorkspace, this);
+        this._transformProjectsAndReturnWorkspace = __bind(this._transformProjectsAndReturnWorkspace, this);
+        this._fetchProjectsForWorkspace = __bind(this._fetchProjectsForWorkspace, this);
+        this._buildWorkspaceFromProjects = __bind(this._buildWorkspaceFromProjects, this);
+        this._wrapStateful = __bind(this._wrapStateful, this);
+        this.sortWorkspaces = __bind(this.sortWorkspaces, this);
+        this.getWorkspace = __bind(this.getWorkspace, this);
+        this.getWorkspaces = __bind(this.getWorkspaces, this);
+        this.get = __bind(this.get, this);
+        this._buildCustomParseChain = __bind(this._buildCustomParseChain, this);
+        this.$cacheWrap = this.$cacheWrap(this.cache, this.cacheKey);
+        this.projectTreeCustomParseChain = this._buildCustomParseChain();
+      }
+
+      RuiAlmProjectPickerTreeBuilder.prototype._buildCustomParseChain = function() {
+        var projectTreeCustomParseChain;
+        projectTreeCustomParseChain = _.map(this.$http.defaults.transformResponse, function(transformer) {
+          return transformer;
+        });
+        projectTreeCustomParseChain.unshift(function(data) {
+          return data != null ? typeof data.replace === "function" ? data.replace(/\\\'/g, "'") : void 0 : void 0;
+        });
+        return projectTreeCustomParseChain;
+      };
+
+      RuiAlmProjectPickerTreeBuilder.prototype.cacheKey = function(key) {
+        if (key == null) {
+          key = "";
+        }
+        return [RuiAlmProjectPickerTreeBuilder.CACHE_KEY].concat(key.split('.')).join('.');
+      };
+
+      RuiAlmProjectPickerTreeBuilder.prototype.get = function() {
+        return this.getWorkspaces();
+      };
+
+      RuiAlmProjectPickerTreeBuilder.prototype.getWorkspaces = function(resetState) {
+        var _this = this;
+        if (resetState == null) {
+          resetState = true;
+        }
+        return this.$cacheWrap('workspaces', function() {
+          return _this._wrapStateful(function() {
+            var params;
+            params = {
+              start: 1,
+              pagesize: 200,
+              query: '(State = "Open")',
+              fetch: 'Name,ObjectID',
+              workspace: 'null'
+            };
+            return _this.$wsapi.get("/workspace", {
+              cache: _this.cache,
+              params: params
+            }).then(function(_arg) {
+              var data;
+              data = _arg.data;
+              return data.QueryResult.Results;
+            }, _this._onError).then(function(workspaces) {
+              return _this.$q.all(_.map(workspaces, function(workspace) {
+                return _this.getWorkspace(workspace, false);
+              }));
+            });
+          }, resetState).then(_this.sortWorkspaces);
+        });
+      };
+
+      RuiAlmProjectPickerTreeBuilder.prototype.getWorkspace = function(workspace, resetState) {
+        var _this = this;
+        if (resetState == null) {
+          resetState = true;
+        }
+        return this.$cacheWrap("workspace." + workspace.ObjectID, function() {
+          return _this._wrapStateful(function() {
+            return _this._fetchProjectsForWorkspace(workspace).then(function(projects) {
+              return _this._buildWorkspaceFromProjects(workspace, projects);
+            });
+          }, resetState);
+        });
+      };
+
+      RuiAlmProjectPickerTreeBuilder.prototype.sortWorkspaces = function(workspaces) {
+        return this.$q.when(_.sortBy(workspaces, 'name'));
+      };
+
+      RuiAlmProjectPickerTreeBuilder.prototype._wrapStateful = function(func, resetState) {
+        var _this = this;
+        if (resetState == null) {
+          resetState = true;
+        }
+        if (!resetState) {
+          return this.$q.when(func());
+        }
+        return this._fetchSelectedProject().then(function(selectedProject) {
+          var funcPromise;
+          funcPromise = _this.$q.when(func());
+          funcPromise['finally'](function() {
+            var args;
+            args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+            return _this._setSelectedProject(selectedProject != null ? selectedProject.oid : void 0).then(function() {
+              var _ref;
+              return (_ref = _this.$q).when.apply(_ref, args);
+            });
+          });
+          return funcPromise.then(function() {
+            var args, _ref;
+            args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+            return (_ref = _this.$q).when.apply(_ref, args);
+          });
+        });
+      };
+
+      RuiAlmProjectPickerTreeBuilder.prototype._buildWorkspaceFromProjects = function(workspace, projects) {
+        workspace = {
+          oid: workspace.ObjectID,
+          name: workspace.Name,
+          isWorkspace: true
+        };
+        return this._transformProjectsAndReturnWorkspace(workspace, projects);
+      };
+
+      RuiAlmProjectPickerTreeBuilder.prototype._fetchProjectsForWorkspace = function(workspace) {
+        var _this = this;
+        return this._findAProjectOidInAWorkspace(workspace).then(function(projectOidInWorkspace) {
+          return _this._fetchProjectsForWorkspaceUsingOidAndSetCurrentOid(projectOidInWorkspace);
+        });
+      };
+
+      RuiAlmProjectPickerTreeBuilder.prototype._transformProjectsAndReturnWorkspace = function(workspace, rootProjectNodes) {
+        var deferred,
+          _this = this;
+        workspace.children = rootProjectNodes;
+        if (workspace.children == null) {
+          workspace.children = [];
+        }
+        if ((rootProjectNodes != null ? rootProjectNodes.length : void 0) > 0) {
+          deferred = this.$q.defer();
+          this._eachProjectInTree(rootProjectNodes, function(project, callback) {
+            project.workspaceOid = workspace.oid;
+            return callback();
+          }, function(selectedProject) {
+            deferred.resolve(workspace);
+            if (!_this.$rootScope.$$phase) {
+              return _this.$rootScope.$digest();
+            }
+          });
+          return deferred.promise;
+        } else {
+          return this.$q.when(workspace);
+        }
+      };
+
+      RuiAlmProjectPickerTreeBuilder.prototype._findAProjectOidInAWorkspace = function(workspace) {
+        var params,
+          _this = this;
+        if ((workspace != null ? workspace._ref : void 0) == null) {
+          return this.$q.reject('Workspace with _ref is required');
+        }
+        params = {
+          start: 1,
+          pagesize: 1,
+          fetch: 'ObjectID',
+          workspace: workspace._ref
+        };
+        return this.$wsapi.get("/project", {
+          cache: this.cache,
+          params: params
+        }).then(function(_arg) {
+          var data, message, projectOidInWorkspace;
+          data = _arg.data;
+          if (data.QueryResult.Results.length !== 1) {
+            message = 'Unexpected results retrieving a project from workspace';
+            _this.$log.error(message, workspace, data);
+            return _this.$q.reject(message);
+          } else {
+            projectOidInWorkspace = data.QueryResult.Results[0].ObjectID;
+            return projectOidInWorkspace;
+          }
+        }, this._onError);
+      };
+
+      RuiAlmProjectPickerTreeBuilder.prototype._fetchProjectsForWorkspaceUsingOidAndSetCurrentOid = function(projectOidInWorkspace) {
+        var options;
+        options = {
+          cache: this.cache,
+          transformResponse: this.projectTreeCustomParseChain
+        };
+        if (projectOidInWorkspace != null) {
+          options.params = {
+            cpoid: projectOidInWorkspace
+          };
+        }
+        return this.$slm.get("/pjt/build.sp", options).then(function(_arg) {
+          var data;
+          data = _arg.data;
+          return data;
+        }, this._onError);
+      };
+
+      RuiAlmProjectPickerTreeBuilder.prototype._fetchSelectedProject = function() {
+        return this._fetchProjectsForWorkspaceUsingOidAndSetCurrentOid().then(this._findSelectedProject);
+      };
+
+      RuiAlmProjectPickerTreeBuilder.prototype._eachProjectInTree = function(projectNodes, projectIterator, callback) {
+        var _this = this;
+        return async.eachSeries(projectNodes, function(project, projectCompleteCallback) {
+          return projectIterator(project, function(err) {
+            if (err != null) {
+              return projectCompleteCallback(err);
+            } else if (project.children) {
+              return _this._eachProjectInTree(project.children, projectIterator, projectCompleteCallback);
+            } else {
+              return projectCompleteCallback();
+            }
+          });
+        }, callback);
+      };
+
+      RuiAlmProjectPickerTreeBuilder.prototype._findSelectedProject = function(rootProjectNodes) {
+        var deferred,
+          _this = this;
+        if (rootProjectNodes != null ? rootProjectNodes.length : void 0) {
+          deferred = this.$q.defer();
+          this._eachProjectInTree(rootProjectNodes, function(project, callback) {
+            if (project.selected) {
+              return callback(project);
+            } else {
+              return callback();
+            }
+          }, function(selectedProject) {
+            deferred.resolve(selectedProject);
+            if (!_this.$rootScope.$$phase) {
+              return _this.$rootScope.$digest();
+            }
+          });
+          return deferred.promise;
+        } else {
+          return this.$q.when();
+        }
+      };
+
+      RuiAlmProjectPickerTreeBuilder.prototype._setSelectedProject = function(selectedProjectOid) {
+        return this._fetchProjectsForWorkspaceUsingOidAndSetCurrentOid(selectedProjectOid);
+      };
+
+      RuiAlmProjectPickerTreeBuilder.prototype._onError = function(_arg) {
+        var config, data, headers, status;
+        data = _arg.data, status = _arg.status, headers = _arg.headers, config = _arg.config;
+        this.$log.error("url: " + config.url + " Error. Data, status", data, status);
+        return this.$q.when.apply(this, arguments);
+      };
+
+      return RuiAlmProjectPickerTreeBuilder;
+
+    })();
+    factory = function(locals) {
+      if (locals == null) {
+        locals = {};
+      }
+      locals = _.pick(locals, 'cache');
+      if (locals.cache == null) {
+        locals.cache = defaultCache;
+      }
+      return $injector.instantiate(RuiAlmProjectPickerTreeBuilder, locals);
+    };
+    factory.defaultCache = defaultCache;
+    return factory;
+  }).factory('ruiAlmProjectPickerTreeBuilder', function(ruiAlmProjectPickerTreeBuilderFactory) {
+    return ruiAlmProjectPickerTreeBuilderFactory();
+  });
+
+}).call(this);
+
+(function() {
+  var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+
+  angular.module('rui.alm.projectPicker.factories.treeSearch', ['rui.util.filters.regExpEscape', 'rui.util.lodash', 'ngSanitize']).factory('ruiAlmProjectPickerTreeSearchFactory', function($injector) {
+    var RuiAlmProjectPickerTreeSearch, factory;
+    RuiAlmProjectPickerTreeSearch = (function() {
+      function RuiAlmProjectPickerTreeSearch($timeout, $log, $filter, $rootScope, $q, projectPicker, term) {
+        this.$timeout = $timeout;
+        this.$log = $log;
+        this.$rootScope = $rootScope;
+        this.$q = $q;
+        this.projectPicker = projectPicker;
+        this.term = term;
+        this.searchExp = __bind(this.searchExp, this);
+        this.escapeSearchTerm = __bind(this.escapeSearchTerm, this);
+        this.cancel = __bind(this.cancel, this);
+        this._searchChildren = __bind(this._searchChildren, this);
+        this._search = __bind(this._search, this);
+        this.search = __bind(this.search, this);
+        this.$regExpEscape = $filter('regExpEscape');
+        this.expression = this.searchExp(this.term);
+      }
+
+      RuiAlmProjectPickerTreeSearch.prototype.search = function(root, delay) {
+        var run,
+          _this = this;
+        run = function() {
+          return _this._search(root);
+        };
+        if (delay) {
+          return this.$timeout(run, delay, false);
+        } else {
+          return run(root);
+        }
+      };
+
+      RuiAlmProjectPickerTreeSearch.prototype._search = function(root) {
+        var expression, name, state;
+        if (this.cancelled) {
+          return this.$q.when();
+        }
+        if (root.name) {
+          expression = this.expression;
+          name = root.name;
+          state = this.projectPicker.getNodeState(root);
+          state.searchMatch = expression.test(name);
+          state.searchMatchName = state.searchMatch ? root.name.replace(expression, "<span class='search-match'>$&</span>") : null;
+        }
+        return this.$q.when(this._searchChildren(root));
+      };
+
+      RuiAlmProjectPickerTreeSearch.prototype._searchChildren = function(root) {
+        var children,
+          _this = this;
+        children = root.children || [];
+        return this.$timeout(function() {
+          var childSearches;
+          if (_this.cancelled) {
+            return _this.$q.when();
+          }
+          childSearches = _.map(children, function(child) {
+            return _this._search(child);
+          });
+          return _this.$q.all(childSearches).then(function(childStates) {
+            var state;
+            if (_this.cancelled) {
+              return _this.$q.when();
+            }
+            state = root.oid ? _this.projectPicker.getNodeState(root) : {};
+            state.inSearchMatchPath = state.searchMatch || _.any(childStates, 'inSearchMatchPath');
+            return _this.$q.when(state);
+          });
+        }, 0, false);
+      };
+
+      RuiAlmProjectPickerTreeSearch.prototype.cancel = function() {
+        return this.cancelled = true;
+      };
+
+      RuiAlmProjectPickerTreeSearch.prototype.escapeSearchTerm = function(term) {
+        return this.$regExpEscape(term);
+      };
+
+      RuiAlmProjectPickerTreeSearch.prototype.searchExp = function(term) {
+        var escaped;
+        escaped = this.escapeSearchTerm(term);
+        return new RegExp(escaped, 'gi');
+      };
+
+      return RuiAlmProjectPickerTreeSearch;
+
+    })();
+    factory = function(term, projectPicker) {
+      var instance, locals;
+      locals = {
+        term: term,
+        projectPicker: projectPicker
+      };
+      return instance = $injector.instantiate(RuiAlmProjectPickerTreeSearch, locals);
+    };
+    return factory;
+  });
+
+}).call(this);
+
+(function() {
+  angular.module('rui.alm.projectPicker', ['rui.alm.projectPicker.factories', 'rui.alm.projectPicker.directives', 'rui.alm.projectPicker.controllers']);
+
+}).call(this);
+
+(function() {
+  angular.module('rui.alm.services', ['rui.alm.services.slm', 'rui.alm.services.wsapi']);
+
+}).call(this);
+
+/**
+ * @ngdoc service
+ * @name rui.alm.services:$slm
+ * @description
+ * @example
+*/
+
+
+(function() {
+  angular.module('rui.alm.services.slm', ['rui.util.http']).provider('$slm', function() {
+    var _this = this;
+    this.baseUrl = '/slm/';
+    this.setBaseUrl = function(baseUrl) {
+      _this.baseUrl = baseUrl;
+    };
+    this.$get = function(ruiHttpWrapper) {
+      return ruiHttpWrapper(_this.baseUrl);
+    };
+    return this;
+  });
+
+}).call(this);
+
+/**
+ * @ngdoc service
+ * @name rui.alm.services:$wsapi
+ * @description
+ * Abstracts $http calls to a wsapi base url. Can be configured at config/provider time to use a particular base url.
+ * @example
+		<example module="App">
+				<file name="script.js">
+						angular.module('App', ['rui.alm.services.wsapi'])
+						.config(function($wsapiProvider){
+							$wsapiProvider.setBaseUrl('/test/');
+						})
+						.controller('Ctrl',
+							function Ctrl($scope, $httpBackend, $wsapi) {
+								$scope.$wsapi = $wsapi;
+								console.log('backend', $httpBackend)
+								console.log('backend.whenGET', $httpBackend.whenGET)
+								$httpBackend.whenGET('/test/sub/url').respond(200, {foo: 'bar'});
+								$wsapi({method: 'GET', url: '/sub/url/'}).then(function(data, status){
+									$scope.data = data
+									$scope.status = status
+								});
+							}
+						);
+				</file>
+				<file name="index.html">
+						<div ng-controller="Ctrl">
+							<div>Wsapi base url: {{$wsapi.baseUrl}}</div>
+							<div>data: {{data}}</div>
+							<div>status: {{status}}</div>
+						</div>
+				</file>
+		</example>
+*/
+
+
+(function() {
+  angular.module('rui.alm.services.wsapi', ['rui.alm.services.slm', 'rui.util.http']).provider('$wsapi', function() {
+    var _this = this;
+    this.baseUrl = '/webservice/v2.0/';
+    this.setBaseUrl = function(baseUrl) {
+      _this.baseUrl = baseUrl;
+    };
+    this.$get = function(ruiHttpWrapper, $slm) {
+      return ruiHttpWrapper(_this.baseUrl, $slm);
+    };
+    return this;
+  });
+
+}).call(this);
+
+(function() {
   var cardboard;
 
   cardboard = angular.module('rui.cardboard', ['rui.templates', 'rui.cardboard.directives.cardboard', 'rui.cardboard.directives.column', 'rui.cardboard.directives.card', 'rui.cardboard.directives.columnscrollable', 'rui.cardboard.directives.columnscrollbars', 'rui.cardboard.filters.wip']);
@@ -1650,7 +2562,7 @@
 (function() {
   var rui;
 
-  rui = angular.module('rui', ['rui.sortable', 'rui.highcharts', 'rui.dropdown', 'rui.tabs', 'rui.util', 'rui.scroll', 'rui.forms']);
+  rui = angular.module('rui', ['rui.sortable', 'rui.highcharts', 'rui.dropdown', 'rui.tabs', 'rui.util', 'rui.scroll', 'rui.forms', 'rui.tree', 'rui.alm']);
 
 }).call(this);
 
@@ -2104,21 +3016,90 @@
   var RuiTreeNodeCtrl,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
-  angular.module('rui.tree.controllers.node', ['rui.util.lodash']).controller('RuiTreeNodeCtrl', RuiTreeNodeCtrl = (function() {
-    function RuiTreeNodeCtrl($scope) {
+  angular.module('rui.tree.controllers.node', ['rui.util.lodash', 'rui.tree.factories.timeoutThrottle']).constant('RuiTreeNodePlaceHolderWarning', "$ruiTreeNode has children but template doesn't define a subtree placeholder with 'rui-tree-node-sub-tree-placeholder'. No sub-tree will be displayed.").controller('RuiTreeNodeCtrl', RuiTreeNodeCtrl = (function() {
+    function RuiTreeNodeCtrl($scope, ruiTreeTimeoutThrottle, $timeout, $compile, $log, RuiTreeNodePlaceHolderWarning) {
+      var _ref;
       this.$scope = $scope;
+      this.ruiTreeTimeoutThrottle = ruiTreeTimeoutThrottle;
+      this.$timeout = $timeout;
+      this.$compile = $compile;
+      this.$log = $log;
+      this.RuiTreeNodePlaceHolderWarning = RuiTreeNodePlaceHolderWarning;
+      this.manageSubTree = __bind(this.manageSubTree, this);
+      this.shouldShowSubTree = __bind(this.shouldShowSubTree, this);
+      this.watchHasChildren = __bind(this.watchHasChildren, this);
       this.watchChildren = __bind(this.watchChildren, this);
       this.setSubTreePlaceholder = __bind(this.setSubTreePlaceholder, this);
-      this.$scope.$ruiTreeNode = {};
-      this.$scope.$watch('$ruiTreeNode.node.children', this.watchChildren, this.$scope.$ruiTree.deepWatch);
+      this.setThrottle = __bind(this.setThrottle, this);
+      this.subTree = null;
+      this.subTreeTemplate = '<ul class="rui-tree-node-subtree" rui-tree="$ruiTreeNode.node"/>';
+      this.$scope.$ruiTreeNode = {
+        hasChildren: false
+      };
+      this.$scope.$watch('$ruiTreeNode.node.children', this.watchChildren, (_ref = this.$scope.$ruiTree) != null ? _ref.deepWatch : void 0);
+      this.$scope.$watch('$ruiTreeNode.hasChildren', this.watchHasChildren);
+      this.$scope.$watch('$ruiTreeNode.hasChildren', this.manageSubTree);
+      this.$scope.$watch('$ruiTreeNode.showChildren', this.manageSubTree);
     }
+
+    RuiTreeNodeCtrl.prototype.setThrottle = function(throttle) {
+      if (throttle) {
+        if (_.isFunction(throttle)) {
+          return this.$timeout = throttle;
+        } else {
+          return this.$timeout = this.ruiTreeTimeoutThrottle;
+        }
+      }
+    };
 
     RuiTreeNodeCtrl.prototype.setSubTreePlaceholder = function(subTreePlaceholder) {
       this.subTreePlaceholder = subTreePlaceholder;
     };
 
     RuiTreeNodeCtrl.prototype.watchChildren = function(children) {
-      return this.$scope.$ruiTreeNode.showChildren = (children != null ? children.length : void 0) > 0;
+      return this.$scope.$ruiTreeNode.hasChildren = (children != null ? children.length : void 0) > 0;
+    };
+
+    RuiTreeNodeCtrl.prototype.watchHasChildren = function(hasChildren) {
+      return this.$scope.$ruiTreeNode.showChildren = this.$scope.$ruiTreeNode.hasChildren;
+    };
+
+    RuiTreeNodeCtrl.prototype.shouldShowSubTree = function() {
+      var shouldShow;
+      shouldShow = this.$scope.$ruiTreeNode.showChildren || (this.$scope.$ruiTreeNode.hasChildren && this.$scope.$ruiTreeNode.eagerBuild);
+      return shouldShow;
+    };
+
+    RuiTreeNodeCtrl.prototype.manageSubTree = function() {
+      var showSubTree, _ref,
+        _this = this;
+      this.subTreePlaceholder;
+      showSubTree = this.shouldShowSubTree();
+      if (showSubTree && (this.subTree == null)) {
+        this.$timeout(function() {
+          if (_this.shouldShowSubTree() && (_this.subTree == null)) {
+            if (_this.subTreePlaceholder == null) {
+              _this.$log.warn(_this.RuiTreeNodePlaceHolderWarning);
+            }
+            return _this.$compile(_this.subTreeTemplate)(_this.$scope.$new(), function(node, scope) {
+              var _ref;
+              if ((_ref = _this.subTreePlaceholder) != null) {
+                _ref.append(node);
+              }
+              return _this.subTree = scope;
+            });
+          }
+        }, 1, false);
+      }
+      if (!showSubTree) {
+        if (this.subTree != null) {
+          this.subTree.$destroy();
+          if ((_ref = this.subTreePlaceholder) != null) {
+            _ref.children().remove();
+          }
+          return this.subTree = null;
+        }
+      }
     };
 
     return RuiTreeNodeCtrl;
@@ -2145,7 +3126,7 @@
   angular.module('rui.tree.directives.content', ['rui.templates', 'rui.util.template']).directive('ruiTreeNodeContent', function($parse, $compile) {
     return {
       restrict: 'EA',
-      require: ['?^ruiTemplates'],
+      require: [],
       scope: false,
       templateUrl: 'rui/tree/templates/content.html',
       replace: true,
@@ -2173,50 +3154,35 @@
 
 
 (function() {
-  angular.module('rui.tree.directives.node', ['rui.templates', 'rui.util.template', 'rui.tree.controllers.node']).constant('RuiTreeNodePlaceHolderWarning', "$ruiTreeNode has children but template doesn't define a subtree placeholder with 'rui-tree-node-sub-tree-placeholder'. No sub-tree will be displayed.").directive('ruiTreeNode', function($compile, $log, RuiTreeNodePlaceHolderWarning) {
+  angular.module('rui.tree.directives.node', ['rui.templates', 'rui.util.template', 'rui.util.timeout', 'rui.tree.controllers.node']).directive('ruiTreeNodeCtrl', function($compile, $log) {
     return {
-      restrict: 'EA',
-      require: ['ruiTreeNode', '^ruiTree', '?^ruiTemplates'],
       scope: true,
-      templateUrl: 'rui/tree/templates/node.html',
-      replace: true,
+      require: ['ruiTreeNodeCtrl', '^ruiTreeCtrl'],
       controller: 'RuiTreeNodeCtrl',
-      ruiTemplate: true,
       link: function($scope, $element, $attrs, _arg) {
-        var controller, subTree, templates, treeController;
-        controller = _arg[0], treeController = _arg[1], templates = _arg[2];
-        subTree = null;
-        $scope.$watch('$node', function(node) {
+        var controller;
+        controller = _arg[0];
+        $scope.$watch($attrs.ruiTreeNodeRoot, function(node) {
           return $scope.$ruiTreeNode.node = node;
         });
-        return $scope.$watch('$ruiTreeNode.showChildren', function(showChildren) {
-          var subTreePlaceholder, _ref, _ref1;
-          subTreePlaceholder = controller.subTreePlaceholder;
-          if (showChildren && (subTree == null)) {
-            if (subTreePlaceholder == null) {
-              $log.warn(RuiTreeNodePlaceHolderWarning);
-            }
-            return $compile('<ul class="rui-tree-node-subtree" rui-tree="$ruiTreeNode.node"/>')($scope.$new(), function(node, scope) {
-              node.insertAfter(controller.subTreePlaceholder);
-              return subTree = {
-                node: node,
-                scope: scope
-              };
-            });
-          } else {
-            if (subTree != null) {
-              if ((_ref = subTree.node) != null) {
-                _ref.remove();
-              }
-            }
-            if (subTree != null) {
-              if ((_ref1 = subTree.scope) != null) {
-                _ref1.$destroy();
-              }
-            }
-            return subTree = null;
-          }
-        });
+        if ($attrs.ruiTreeNodeThrottleSubTree) {
+          controller.setThrottle($scope.$eval($attrs.ruiTreeNodeThrottleSubTree));
+        }
+        if ($attrs.ruiTreeNodeEagerBuild) {
+          return $scope.$ruiTreeNode.eagerBuild = $scope.$eval($attrs.ruiTreeNodeEagerBuild);
+        }
+      }
+    };
+  }).directive('ruiTreeNode', function() {
+    return {
+      restrict: 'EA',
+      require: ['ruiTreeNodeCtrl'],
+      templateUrl: 'rui/tree/templates/node.html',
+      replace: true,
+      ruiTemplate: true,
+      compile: function($element, $attrs) {
+        $attrs.$set('ruiTreeNodeRoot', $attrs.ruiTreeNode);
+        return function() {};
       }
     };
   });
@@ -2237,12 +3203,9 @@
   angular.module('rui.tree.directives.nodeSubTreePlaceholder', []).directive('ruiTreeNodeSubTreePlaceholder', function($compile) {
     return {
       restrict: 'EAC',
-      require: ['^ruiTreeNode'],
+      require: ['^ruiTreeNodeCtrl'],
       scope: false,
       compile: function($element) {
-        $element.css({
-          display: 'none'
-        });
         return {
           pre: function($scope, $element, $attrs, _arg) {
             var nodeController;
@@ -2280,29 +3243,6 @@
 							<h3>Default</h3>
 							<ul rui-tree="nodes" />
 							
-							<h3>With Custom Tree And Node Templates</h3>
-							<div rui-templates>
-								<div rui-template name="rui-tree">
-									<ul class="custom-tree">
-										<li ng-if="!$ruiTree.level">Before first level nodes</li>
-										<li class="custom-node" ng-repeat="$node in $ruiTree.root.children" 
-											rui-tree-node />
-										<li ng-if="!$ruiTree.level">After first level nodes</li>
-									</ul>
-								</div>
-								<div rui-template name="rui-tree-node">
-									<li class="my-custom-node-type">
-										<div rui-tree-node-content />
-										<div>  | ^ level: {{$ruiTree.level}} </div>
-										<div class="rui-tree-node-sub-tree-placeholder"/>
-									</li>
-								</div>
-								<div rui-template name="rui-tree-node-content">
-									<div class="my-custom-content">- {{$ruiTreeNode.node.name}} </div>
-								</div>										
-								<ul rui-tree="nodes"/>
-							</div>
-
 							<h3>With Custom Node Template</h3>
 							<ul rui-tree="nodes" rui-templates>
 								<div rui-template name="rui-tree-node">
@@ -2333,17 +3273,12 @@
 
 
 (function() {
-  angular.module('rui.tree.directives.tree', ['rui.templates', 'rui.util.template', 'rui.tree.controllers.tree']).directive('ruiTree', function() {
+  angular.module('rui.tree.directives.tree', ['rui.templates', 'rui.util.template', 'rui.tree.controllers.tree']).directive('ruiTreeCtrl', function() {
     return {
       restrict: 'EA',
-      require: ['ruiTree'],
-      templateUrl: 'rui/tree/templates/tree.html',
+      require: ['ruiTreeCtrl'],
       scope: true,
-      replace: true,
-      transclude: true,
       controller: 'RuiTreeCtrl',
-      terminal: true,
-      ruiTemplate: true,
       link: function($scope, $element, $attrs, _arg) {
         var controller, _ref;
         controller = _arg[0];
@@ -2352,7 +3287,20 @@
         if (((_ref = $scope.$parent) != null ? _ref.$ruiTree : void 0) != null) {
           $scope.$ruiTree.level = $scope.$parent.$ruiTree.level + 1;
         }
-        return $scope.$watch($attrs.ruiTree, controller.updateRoot, true);
+        return $scope.$watch($attrs.ruiTreeRoot, controller.updateRoot, false);
+      }
+    };
+  }).directive('ruiTree', function() {
+    return {
+      restrict: 'EA',
+      require: ['ruiTreeCtrl'],
+      templateUrl: 'rui/tree/templates/tree.html',
+      replace: true,
+      transclude: true,
+      ruiTemplate: true,
+      compile: function($element, $attrs) {
+        $attrs.$set('ruiTreeRoot', $attrs.ruiTree);
+        return function() {};
       }
     };
   });
@@ -2360,7 +3308,164 @@
 }).call(this);
 
 (function() {
-  angular.module('rui.tree', ['rui.templates', 'rui.util.template', 'rui.tree.directives', 'rui.tree.controllers']);
+  angular.module('rui.tree.factories', ['rui.tree.factories.timeoutThrottle']);
+
+}).call(this);
+
+(function() {
+  angular.module('rui.tree.factories.timeoutThrottle', ['rui.util.timeout']).factory('ruiTreeTimeoutThrottle', function($ruiTimeoutThrottleFactory) {
+    return $ruiTimeoutThrottleFactory(10);
+  });
+
+}).call(this);
+
+(function() {
+  angular.module('rui.tree', ['rui.templates', 'rui.util.template', 'rui.tree.directives', 'rui.tree.controllers', 'rui.tree.factories']);
+
+}).call(this);
+
+(function() {
+  angular.module('rui.util.async', []).factory('async', function() {
+    return async;
+  });
+
+}).call(this);
+
+(function() {
+  angular.module('rui.util.bootstrap', []);
+
+}).call(this);
+
+/**
+ * @ngdoc service
+ * @name rui.util.cache:$cacheWrap
+ * @type function
+ * @description
+ * Helper function that returns a cached value or runs your function to cache the result and return your value as a promise.
+ * If you value function returns a promise, the wrapper will wait for resolution and put the result in your cache.
+*/
+
+
+(function() {
+  angular.module('rui.util.cache.factories.wrap', ['rui.util.lodash']).factory('$cacheWrap', function($q) {
+    var $cacheWrap;
+    $cacheWrap = function(cache, keyFn) {
+      if (keyFn == null) {
+        keyFn = _.identity;
+      }
+      return function(key, func) {
+        var deferred;
+        key = keyFn(key);
+        if (cache.get(key)) {
+          return $q.when(cache.get(key));
+        }
+        deferred = $q.defer();
+        cache.put(key, deferred.promise);
+        deferred.promise.then(function(result) {
+          return cache.put(key, result);
+        }, function() {
+          return cache.remove(key);
+        });
+        deferred.resolve($q.when(func()));
+        return deferred.promise;
+      };
+    };
+    return $cacheWrap;
+  });
+
+}).call(this);
+
+(function() {
+  angular.module('rui.util.cache', ['rui.util.cache.factories.wrap']);
+
+}).call(this);
+
+(function() {
+  angular.module('rui.util.element.directives.focusMe', []).directive('ruiFocusMe', function($timeout, $parse) {
+    return {
+      link: function($scope, $element, $attrs) {
+        var model;
+        model = $parse($attrs.ruiFocusMe);
+        return $scope.$watch(model, function(value) {
+          if (value) {
+            return $timeout(function() {
+              return $element[0].focus();
+            });
+          }
+        });
+      }
+    };
+  });
+
+}).call(this);
+
+(function() {
+  angular.module('rui.util.element.directives', ['rui.util.element.directives.focusMe']);
+
+}).call(this);
+
+(function() {
+  angular.module('rui.util.element', ['rui.util.element.directives']);
+
+}).call(this);
+
+(function() {
+  angular.module('rui.util.filters', ['rui.util.filters.regExpEscape']);
+
+}).call(this);
+
+(function() {
+  angular.module('rui.util.filters.regExpEscape', []).filter('regExpEscape', function() {
+    return function(termToEscape) {
+      var escaped;
+      escaped = termToEscape.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+      return escaped;
+    };
+  });
+
+}).call(this);
+
+(function() {
+  var __slice = [].slice;
+
+  angular.module('rui.util.http.factories.httpWrapper', ['rui.util.lodash']).factory('ruiHttpWrapper', function($http) {
+    return function(baseUrl, http) {
+      var getUrl, wrapper;
+      if (http == null) {
+        http = $http;
+      }
+      getUrl = function(url) {
+        var toAdd;
+        toAdd = url;
+        if (baseUrl[baseUrl.length - 1] === '/' && url.indexOf('/') === 0) {
+          toAdd = toAdd.substring(1);
+        }
+        return baseUrl + toAdd;
+      };
+      wrapper = function(urlOrConfig, config) {
+        if (_.isString(urlOrConfig)) {
+          urlOrConfig = getUrl(urlOrConfig);
+        } else {
+          urlOrConfig.url = getUrl(urlOrConfig.url);
+        }
+        return http.call(this, urlOrConfig, config);
+      };
+      _.each(['GET', 'DELETE', 'POST', 'PUT'], function(method) {
+        return wrapper[method.toLowerCase()] = function() {
+          var args, url, _ref;
+          url = arguments[0], args = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
+          url = getUrl(url);
+          return (_ref = http[method.toLowerCase()]).call.apply(_ref, [this, url].concat(__slice.call(args)));
+        };
+      });
+      return wrapper;
+    };
+  });
+
+}).call(this);
+
+(function() {
+  angular.module('rui.util.http', ['rui.util.http.factories.httpWrapper']);
 
 }).call(this);
 
@@ -2434,7 +3539,7 @@
       return _.wrap(compileFn, function() {
         var $element, args, compileFn, compiled;
         compileFn = arguments[0], $element = arguments[1], args = 3 <= arguments.length ? __slice.call(arguments, 2) : [];
-        $element.children().attr('ng-if', '!$ruiTemplate');
+        $element.children().attr('rui-template-if', '');
         compiled = compileFn.call.apply(compileFn, [this, $element].concat(__slice.call(args)));
         if (self.isLinkFn(compiled) || self.isLinkObject(compiled)) {
           compiled = self.wrapLink(compiled, templateName);
@@ -2651,7 +3756,7 @@ this controller to merge the template on to their element.
 }).call(this);
 
 (function() {
-  angular.module('rui.util.template.directives', ['rui.util.template.directives.template', 'rui.util.template.directives.templateContainer']);
+  angular.module('rui.util.template.directives', ['rui.util.template.directives.template', 'rui.util.template.directives.templateContainer', 'rui.util.template.directives.templateIf']);
 
 }).call(this);
 
@@ -2776,8 +3881,70 @@ this controller to merge the template on to their element.
 
 }).call(this);
 
+/**
+ * Implementation of ng-if that will run only once.
+ *
+*/
+
+
+(function() {
+  angular.module('rui.util.template.directives.templateIf', []).directive('ruiTemplateIf', function($parse, $compile) {
+    return {
+      transclude: 'element',
+      priority: 600,
+      terminal: true,
+      restrict: 'A',
+      compile: function($element) {
+        return function($scope, $element, $attr, ctrl, $transclude) {
+          if (!$scope.$ruiTemplate) {
+            return $transclude($scope.$new(), function(clone) {
+              return clone.insertAfter($element);
+            });
+          }
+        };
+      }
+    };
+  });
+
+}).call(this);
+
 (function() {
   angular.module('rui.util.template', ['rui.util.template.config', 'rui.util.template.controllers', 'rui.util.template.directives', 'rui.util.lodash']);
+
+}).call(this);
+
+(function() {
+  var __slice = [].slice;
+
+  angular.module('rui.util.timeout', []).factory('$ruiTimeoutThrottleFactory', function($timeout) {
+    return function(max) {
+      var processNext, queue, running;
+      queue = [];
+      running = 0;
+      processNext = function() {
+        var args, context, next;
+        if (running >= max) {
+          return;
+        }
+        next = queue.shift();
+        context = next[0];
+        args = next.slice(1);
+        running = running + 1;
+        return $timeout.apply(context, args)['finally'](function() {
+          running = running - 1;
+          return processNext();
+        });
+      };
+      return function() {
+        var args;
+        args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+        queue.push([this].concat(args));
+        return processNext();
+      };
+    };
+  }).factory('$ruiTimeoutThrottle', function($ruiTimeoutThrottleFactory) {
+    return $ruiTimeoutThrottleFactory(10);
+  });
 
 }).call(this);
 
@@ -3014,6 +4181,6 @@ this controller to merge the template on to their element.
 (function() {
   var util;
 
-  util = angular.module('rui.util', ['rui.util.transclude', 'rui.util.template', 'rui.util.lodash']);
+  util = angular.module('rui.util', ['rui.util.transclude', 'rui.util.template', 'rui.util.lodash', 'rui.util.cache', 'rui.util.http', 'rui.util.bootstrap', 'rui.util.element', 'rui.util.timeout']);
 
 }).call(this);
