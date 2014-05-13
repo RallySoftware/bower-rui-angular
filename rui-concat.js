@@ -586,7 +586,7 @@
         }
         if ((rootProjectNodes != null ? rootProjectNodes.length : void 0) > 0) {
           deferred = this.$q.defer();
-          this._eachProjectInTree(null, rootProjectNodes, function(parent, project, callback) {
+          this._eachProjectInTree(workspace, rootProjectNodes, function(parent, project, callback) {
             project.workspaceOid = workspace.oid;
             project.parentOid = parent != null ? parent.oid : void 0;
             return callback();
