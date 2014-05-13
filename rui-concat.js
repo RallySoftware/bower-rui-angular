@@ -335,10 +335,10 @@
         }
         if ($attrs.ruiAlmProjectPickerSelected != null) {
           expression = $parse($attrs.ruiAlmProjectPickerSelected);
+          $scope.$watch(expression, controller.selectNode);
           $scope.$watch('$ruiAlmProjectPicker.selectedNode', function(node) {
             return expression.assign($scope, node);
           });
-          $scope.$watch(expression, controller.selectNode);
         }
         if ($attrs.ruiAlmProjectPickerThrottleSubTree) {
           $scope.$ruiAlmProjectPicker.throttleSubTree = $scope.$eval($attrs.ruiAlmProjectPickerThrottleSubTree);
@@ -563,6 +563,7 @@
       RuiAlmProjectPickerTreeBuilder.prototype._buildWorkspaceFromProjects = function(workspace, projects) {
         workspace = {
           oid: workspace.ObjectID,
+          workspaceOid: workspace.ObjectID,
           name: workspace.Name,
           isWorkspace: true
         };
@@ -585,8 +586,9 @@
         }
         if ((rootProjectNodes != null ? rootProjectNodes.length : void 0) > 0) {
           deferred = this.$q.defer();
-          this._eachProjectInTree(rootProjectNodes, function(project, callback) {
+          this._eachProjectInTree(null, rootProjectNodes, function(parent, project, callback) {
             project.workspaceOid = workspace.oid;
+            project.parentOid = parent != null ? parent.oid : void 0;
             return callback();
           }, function(selectedProject) {
             deferred.resolve(workspace);
@@ -651,14 +653,14 @@
         return this._fetchProjectsForWorkspaceUsingOidAndSetCurrentOid().then(this._findSelectedProject);
       };
 
-      RuiAlmProjectPickerTreeBuilder.prototype._eachProjectInTree = function(projectNodes, projectIterator, callback) {
+      RuiAlmProjectPickerTreeBuilder.prototype._eachProjectInTree = function(parent, projectNodes, projectIterator, callback) {
         var _this = this;
         return async.eachSeries(projectNodes, function(project, projectCompleteCallback) {
-          return projectIterator(project, function(err) {
+          return projectIterator(parent, project, function(err) {
             if (err != null) {
               return projectCompleteCallback(err);
-            } else if (project.children) {
-              return _this._eachProjectInTree(project.children, projectIterator, projectCompleteCallback);
+            } else if (project != null ? project.children : void 0) {
+              return _this._eachProjectInTree(project, project.children, projectIterator, projectCompleteCallback);
             } else {
               return projectCompleteCallback();
             }
@@ -671,7 +673,7 @@
           _this = this;
         if (rootProjectNodes != null ? rootProjectNodes.length : void 0) {
           deferred = this.$q.defer();
-          this._eachProjectInTree(rootProjectNodes, function(project, callback) {
+          this._eachProjectInTree(null, rootProjectNodes, function(parent, project, callback) {
             if (project.selected) {
               return callback(project);
             } else {

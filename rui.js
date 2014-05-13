@@ -320,10 +320,10 @@
           }
           if ($attrs.ruiAlmProjectPickerSelected != null) {
             expression = $parse($attrs.ruiAlmProjectPickerSelected);
+            $scope.$watch(expression, controller.selectNode);
             $scope.$watch('$ruiAlmProjectPicker.selectedNode', function (node) {
               return expression.assign($scope, node);
             });
-            $scope.$watch(expression, controller.selectNode);
           }
           if ($attrs.ruiAlmProjectPickerThrottleSubTree) {
             $scope.$ruiAlmProjectPicker.throttleSubTree = $scope.$eval($attrs.ruiAlmProjectPickerThrottleSubTree);
@@ -553,6 +553,7 @@
         RuiAlmProjectPickerTreeBuilder.prototype._buildWorkspaceFromProjects = function (workspace, projects) {
           workspace = {
             oid: workspace.ObjectID,
+            workspaceOid: workspace.ObjectID,
             name: workspace.Name,
             isWorkspace: true
           };
@@ -572,8 +573,9 @@
           }
           if ((rootProjectNodes != null ? rootProjectNodes.length : void 0) > 0) {
             deferred = this.$q.defer();
-            this._eachProjectInTree(rootProjectNodes, function (project, callback) {
+            this._eachProjectInTree(null, rootProjectNodes, function (parent, project, callback) {
               project.workspaceOid = workspace.oid;
+              project.parentOid = parent != null ? parent.oid : void 0;
               return callback();
             }, function (selectedProject) {
               deferred.resolve(workspace);
@@ -631,14 +633,14 @@
         RuiAlmProjectPickerTreeBuilder.prototype._fetchSelectedProject = function () {
           return this._fetchProjectsForWorkspaceUsingOidAndSetCurrentOid().then(this._findSelectedProject);
         };
-        RuiAlmProjectPickerTreeBuilder.prototype._eachProjectInTree = function (projectNodes, projectIterator, callback) {
+        RuiAlmProjectPickerTreeBuilder.prototype._eachProjectInTree = function (parent, projectNodes, projectIterator, callback) {
           var _this = this;
           return async.eachSeries(projectNodes, function (project, projectCompleteCallback) {
-            return projectIterator(project, function (err) {
+            return projectIterator(parent, project, function (err) {
               if (err != null) {
                 return projectCompleteCallback(err);
-              } else if (project.children) {
-                return _this._eachProjectInTree(project.children, projectIterator, projectCompleteCallback);
+              } else if (project != null ? project.children : void 0) {
+                return _this._eachProjectInTree(project, project.children, projectIterator, projectCompleteCallback);
               } else {
                 return projectCompleteCallback();
               }
@@ -649,7 +651,7 @@
           var deferred, _this = this;
           if (rootProjectNodes != null ? rootProjectNodes.length : void 0) {
             deferred = this.$q.defer();
-            this._eachProjectInTree(rootProjectNodes, function (project, callback) {
+            this._eachProjectInTree(null, rootProjectNodes, function (parent, project, callback) {
               if (project.selected) {
                 return callback(project);
               } else {
@@ -3975,7 +3977,7 @@ angular.module('rui.templates').run(['$templateCache', function($templateCache) 
   'use strict';
 
   $templateCache.put('rui/alm/projectPicker/templates/projectPicker.html',
-    "<div rui-alm-project-picker-ctrl=rui-alm-project-picker-ctrl class=rui-alm-project-picker><div ng-class=\"{ dropdown: $ruiAlmProjectPicker.useDropdown, open: $ruiAlmProjectPicker.dropdownIsOpen }\" rui-focus-me=$ruiAlmProjectPicker.dropdownIsOpen tabindex=0 class=rui-alm-project-picker-dropdown><span ng-if=$ruiAlmProjectPicker.isLoading class=\"is-loading icon-spin icon-progress\"></span><a ng-click=$ruiAlmProjectPicker.toggleDropdown($event) ng-show=$ruiAlmProjectPicker.useDropdown ng-bind=$ruiAlmProjectPicker.triggerText class=rui-alm-project-picker-dropdown-toggle></a><div ng-class=\"{ 'dropdown-menu': $ruiAlmProjectPicker.useDropdown }\" class=rui-alm-project-picker-dropdown-menu><div class=rui-alm-project-picker-search><input placeholder=Search ng-model=$ruiAlmProjectPicker.searchTerm ui-keypress=\"{'escape': $ruiAlmProjectPicker.searchEscapeKeyPress()}\" ui-event=\"{ blur : '$ruiAlmProjectPicker.onBlur($event)' }\"><span class=search-indicators><span ng-if=$ruiAlmProjectPicker.searchInProgress class=\"search-in-progress icon-progress icon-spin\"></span><a ng-if=$ruiAlmProjectPicker.isSearching ng-click=$ruiAlmProjectPicker.clearSearch() class=\"clear-search icon-cancel\"></a></span></div><div class=tree-container><ul rui-alm-project-picker-tree=$ruiAlmProjectPicker.workspaces></ul></div></div></div></div>"
+    "<div rui-alm-project-picker-ctrl=rui-alm-project-picker-ctrl class=rui-alm-project-picker><div ng-class=\"{ dropdown: $ruiAlmProjectPicker.useDropdown, open: $ruiAlmProjectPicker.dropdownIsOpen }\" rui-focus-me=$ruiAlmProjectPicker.dropdownIsOpen tabindex=0 class=rui-alm-project-picker-dropdown><span ng-if=$ruiAlmProjectPicker.isLoading class=\"is-loading icon-spin icon-progress\"></span><a ng-click=$ruiAlmProjectPicker.toggleDropdown($event) ng-show=$ruiAlmProjectPicker.useDropdown class=rui-alm-project-picker-dropdown-toggle><span ng-bind=$ruiAlmProjectPicker.triggerText></span><span class=\"trigger-icon icon-chevron-down\"></span></a><div ng-class=\"{ 'dropdown-menu': $ruiAlmProjectPicker.useDropdown }\" class=rui-alm-project-picker-dropdown-menu><div class=rui-alm-project-picker-search><input placeholder=Search ng-model=$ruiAlmProjectPicker.searchTerm ui-keypress=\"{'escape': $ruiAlmProjectPicker.searchEscapeKeyPress()}\" ui-event=\"{ blur : '$ruiAlmProjectPicker.onBlur($event)' }\"><span class=search-indicators><span ng-if=$ruiAlmProjectPicker.searchInProgress class=\"search-in-progress icon-progress icon-spin\"></span><a ng-if=$ruiAlmProjectPicker.isSearching ng-click=$ruiAlmProjectPicker.clearSearch() class=\"clear-search icon-cancel\"></a></span></div><div class=tree-container><ul rui-alm-project-picker-tree=$ruiAlmProjectPicker.workspaces></ul></div></div></div></div>"
   );
 
 
