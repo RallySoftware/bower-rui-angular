@@ -2215,6 +2215,86 @@
     return ToggleCtrl;
   }());
 }.call(this));
+(function () {
+  angular.module('rui.highcharts.decorators', [
+    'rui.highcharts.decorators.useHtml',
+    'rui.highcharts.decorators.tooltip'
+  ]);
+}.call(this));
+(function () {
+  var __slice = [].slice;
+  angular.module('rui.highcharts.decorators.tooltip', ['rui.highcharts.decorators.useHtml']).config([
+    '$provide',
+    function ($provide) {
+      return $provide.decorator('Highcharts', function ($delegate, $compile) {
+        $delegate.Tooltip.prototype.init = _.wrap($delegate.Tooltip.prototype.init, function () {
+          var args, chart, initFn, ngTemplateUrl, options;
+          initFn = arguments[0], args = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
+          chart = args[0], options = args[1];
+          if (options.ngTemplateUrl) {
+            options.useHTML = true;
+            ngTemplateUrl = options.ngTemplateUrl;
+            options.formatter = function (tooltip) {
+              var $scope;
+              $scope = angular.element(tooltip.label.div).scope();
+              $scope.$chart = chart;
+              $scope.$tooltip = this;
+              return '<div ng-include="\'' + ngTemplateUrl + '\'">';
+            };
+          }
+          return initFn.apply(this, args);
+        });
+        return $delegate;
+      });
+    }
+  ]);
+}.call(this));
+(function () {
+  var __slice = [].slice;
+  angular.module('rui.highcharts.decorators.useHtml', ['rui.highcharts.factories.highcharts']).config([
+    '$provide',
+    function ($provide) {
+      return $provide.decorator('Highcharts', function ($delegate, $compile) {
+        $delegate.Chart.prototype.getContainer = _.wrap($delegate.Chart.prototype.getContainer, function () {
+          var $scope, args, getContainerFn, result;
+          getContainerFn = arguments[0], args = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
+          result = getContainerFn.apply(this, args);
+          $scope = angular.element(this.renderTo).scope().$new();
+          this.$scope = $scope;
+          $scope.$chart = this;
+          $compile(this.container)(this.$scope);
+          return result;
+        });
+        $delegate.Renderer.prototype.html = _.wrap($delegate.Renderer.prototype.html, function () {
+          var $innerScope, $scope, args, htmlFn, htmlWrapper, _ref, _ref1;
+          htmlFn = arguments[0], args = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
+          htmlWrapper = htmlFn.apply(this, args);
+          $scope = angular.element(this.box).scope().$new();
+          $compile(htmlWrapper.element)($scope);
+          $(htmlWrapper.element).on('remove', function () {
+            return $scope.$destroy();
+          });
+          $innerScope = null;
+          if ((_ref = htmlWrapper.attrSetters) != null) {
+            _ref.text = _.wrap((_ref1 = htmlWrapper.attrSetters) != null ? _ref1.text : void 0, function () {
+              var args, result, textFn;
+              textFn = arguments[0], args = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
+              result = textFn.apply(this, args);
+              $innerScope = $scope.$new();
+              $compile($(this.element).contents())($innerScope);
+              if (!$innerScope.$$phase) {
+                $innerScope.$digest();
+              }
+              return result;
+            });
+          }
+          return htmlWrapper;
+        });
+        return $delegate;
+      });
+    }
+  ]);
+}.call(this));
 /**
  * @ngdoc directive
  * @name rui.highcharts.directives:ruiHighcharts
@@ -2225,17 +2305,23 @@
         <file name="script.js">
             angular.module('App', ['rui.highcharts'])
             .controller('Ctrl',
-              function Ctrl($scope) {
+              function Ctrl($scope, $templateCache) {
+                  $templateCache.put("templates/myTooltip.html",
+                    "<span>x: {{$tooltip.x}} y: {{$tooltip.y}}</span>");
+
                   $scope.highchartsConfig = {
-                    chart: {
-                      type: 'bar'
+                    xAxis: {
+                        categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
                     },
-                    series: [
-                      {
-                        name: 'Year 1800',
-                        data: [107, 31, 635, 203, 2]
-                      }
-                    ]
+                    
+                    series: [{
+                        data: [29.9, 71.5, 106.4, 129.2, 144.0, 176.0, 135.6, 148.5, 216.4, 194.1, 95.6, 54.4]        
+                    }, {
+                        data: [194.1, 95.6, 54.4, 29.9, 71.5, 106.4, 129.2, 144.0, 176.0, 135.6, 148.5, 216.4]        
+                    }],
+                    tooltip: {
+                      ngTemplateUrl: 'templates/myTooltip.html'
+                    }
                   }
               }
             );
@@ -2374,7 +2460,8 @@
     'rui.templates',
     'rui.highcharts.directives.highcharts',
     'rui.highcharts.directives.html',
-    'rui.highcharts.factories.highcharts'
+    'rui.highcharts.factories.highcharts',
+    'rui.highcharts.decorators'
   ]);
 }.call(this));
 (function () {
