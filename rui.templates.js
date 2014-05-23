@@ -2,17 +2,7 @@ angular.module('rui.templates').run(['$templateCache', function($templateCache) 
   'use strict';
 
   $templateCache.put('rui/alm/projectPicker/templates/projectPicker.html',
-    "<div rui-alm-project-picker-ctrl=rui-alm-project-picker-ctrl class=rui-alm-project-picker><div ng-class=\"{ dropdown: $ruiAlmProjectPicker.useDropdown, open: $ruiAlmProjectPicker.dropdownIsOpen }\" rui-focus-me=$ruiAlmProjectPicker.dropdownIsOpen tabindex=0 class=rui-alm-project-picker-dropdown><span ng-if=$ruiAlmProjectPicker.isLoading class=\"is-loading icon-spin icon-progress\"></span><a ng-click=$ruiAlmProjectPicker.toggleDropdown($event) ng-show=$ruiAlmProjectPicker.useDropdown class=rui-alm-project-picker-dropdown-toggle><span ng-bind=$ruiAlmProjectPicker.triggerText></span><span class=\"trigger-icon icon-chevron-down\"></span></a><div ng-class=\"{ 'dropdown-menu': $ruiAlmProjectPicker.useDropdown }\" class=rui-alm-project-picker-dropdown-menu><div class=rui-alm-project-picker-search><input placeholder=Search ng-model=$ruiAlmProjectPicker.searchTerm ui-keypress=\"{'escape': $ruiAlmProjectPicker.searchEscapeKeyPress()}\" ui-event=\"{ blur : '$ruiAlmProjectPicker.onBlur($event)' }\"><span class=search-indicators><span ng-if=$ruiAlmProjectPicker.searchInProgress class=\"search-in-progress icon-progress icon-spin\"></span><a ng-if=$ruiAlmProjectPicker.isSearching ng-click=$ruiAlmProjectPicker.clearSearch() class=\"clear-search icon-cancel\"></a></span></div><div class=tree-container><ul rui-alm-project-picker-tree=$ruiAlmProjectPicker.workspaces></ul></div></div></div></div>"
-  );
-
-
-  $templateCache.put('rui/alm/projectPicker/templates/projectPickerNode.html',
-    "<li rui-tree-node-ctrl=rui-tree-node-ctrl rui-alm-project-picker-node-ctrl=rui-alm-project-picker-node-ctrl ng-show=$ruiAlmProjectPickerNode.showNode rui-tree-node-throttle-sub-tree=$ruiAlmProjectPicker.throttleSubTree rui-tree-node-eager-build=$ruiAlmProjectPicker.eagerBuild class=\"rui-tree-node rui-alm-project-picker-node\"><div class=node-container><div class=rui-alm-project-picker-expand-toggle-area><span ng-click=$ruiAlmProjectPickerNode.toggleExpand() ng-if=$ruiAlmProjectPickerNode.canToggleExpand ng-class=\"{'rui-alm-project-picker-toggle-disabled': $ruiAlmProjectPickerNode.toggleDisabled}\" class=rui-alm-project-picker-expand-toggle><a ng-if=$ruiAlmProjectPickerNode.canExpand class=icon-expand></a><a ng-if=$ruiAlmProjectPickerNode.canCollapse class=icon-collapse></a></span></div><div ng-click=$ruiAlmProjectPickerNode.selectNode() ng-class=\"{'rui-alm-project-picker-selected': $ruiAlmProjectPickerNode.state.selected, 'rui-alm-project-picker-in-select-path': $ruiAlmProjectPickerNode.state.inSelectPath }\" class=rui-alm-project-picker-content><span ng-bind=$ruiTreeNode.node.name ng-if=\"!$ruiAlmProjectPicker.isSearching || !$ruiAlmProjectPickerNode.state.searchMatch\" class=name></span><span ng-bind-html=$ruiAlmProjectPickerNode.state.searchMatchName ng-if=\"$ruiAlmProjectPicker.isSearching &amp;&amp; $ruiAlmProjectPickerNode.state.searchMatch\" class=name-with-match></span><span ng-if=$ruiTreeNode.node.isWorkspace class=is-workspace>&nbsp;(workspace)</span></div></div><div class=rui-tree-node-sub-tree-placeholder></div></li>"
-  );
-
-
-  $templateCache.put('rui/alm/projectPicker/templates/projectPickerTree.html',
-    "<ul rui-alm-project-picker-tree-ctrl=rui-alm-project-picker-tree-ctrl rui-tree-ctrl=rui-tree-ctrl class=\"rui-tree rui-alm-project-picker-tree\"><li ng-repeat=\"$node in $ruiTree.root.children\" rui-alm-project-picker-node=$node class=rui-tree-nodes></li></ul>"
+    "<div rui-alm-project-picker-ctrl=rui-alm-project-picker-ctrl class=rui-alm-project-picker><div ng-class=\"{ dropdown: $ruiAlmProjectPicker.useDropdown, open: $ruiAlmProjectPicker.dropdownIsOpen }\" rui-focus-me=$ruiAlmProjectPicker.dropdownIsOpen tabindex=0 class=rui-alm-project-picker-dropdown><span ng-if=$ruiAlmProjectPicker.isLoading class=\"is-loading icon-spin icon-progress\"></span><a ng-click=$ruiAlmProjectPicker.toggleDropdown($event) ng-show=$ruiAlmProjectPicker.useDropdown class=rui-alm-project-picker-dropdown-toggle><span ng-bind=$ruiAlmProjectPicker.triggerText></span><span class=\"trigger-icon icon-chevron-down\"></span></a><div ng-class=\"{ 'dropdown-menu': $ruiAlmProjectPicker.useDropdown }\" class=rui-alm-project-picker-dropdown-menu><div class=rui-alm-project-picker-search><input placeholder=Search ng-model=$ruiAlmProjectPicker.searchTerm ui-keypress=\"{'escape': $ruiAlmProjectPicker.clearSearch()}\" ui-event=\"{ blur : '$ruiAlmProjectPicker.onBlur($event)' }\"><span class=search-indicators><span ng-if=$ruiAlmProjectPicker.searchInProgress class=\"search-in-progress icon-progress icon-spin\"></span><a ng-if=$ruiAlmProjectPicker.isSearching ng-click=$ruiAlmProjectPicker.clearSearch() class=\"clear-search icon-cancel\"></a></span></div><div class=tree-container><ul rui-tree=\"$ruiAlmProjectPicker.workspaces track by oid\" rui-tree-expandable=\"\" rui-tree-search=\"$ruiAlmProjectPicker.searchTerm search by name\" rui-tree-selectable=\"\" rui-tree-selected-node=$ruiAlmProjectPicker.selectedNode rui-alm-project-picker-tree=\"\" class=rui-tree></ul></div></div></div></div>"
   );
 
 
@@ -77,12 +67,22 @@ angular.module('rui.templates').run(['$templateCache', function($templateCache) 
 
 
   $templateCache.put('rui/tree/templates/content.html',
-    "<div class=rui-tree-node-content><span ng-bind=$ruiTreeNode.node.name></span></div>"
+    "<div class=rui-tree-node-content><span ng-bind=$ruiTreeNode.node.name class=name></span></div>"
+  );
+
+
+  $templateCache.put('rui/tree/templates/expandCollapse.html',
+    "<div rui-tree-node-expand-collapse-ctrl=rui-tree-node-expand-collapse-ctrl class=rui-tree-node-expand-toggle-area><span ng-click=$ruiTreeNode.toggleExpand() ng-if=$ruiTreeNode.canToggleExpand ng-class=\"{'rui-tree-node-toggle-disabled': $ruiTreeNode.toggleDisabled}\" class=rui-tree-node-expand-toggle><a ng-if=$ruiTreeNode.canExpand class=icon-expand></a><a ng-if=$ruiTreeNode.canCollapse class=icon-collapse></a></span></div>"
   );
 
 
   $templateCache.put('rui/tree/templates/node.html',
-    "<li rui-tree-node-ctrl=rui-tree-node-ctrl class=rui-tree-node><div rui-tree-node-content=rui-tree-node-content></div><div class=rui-tree-node-sub-tree-placeholder></div></li>"
+    "<li rui-tree-node-ctrl=rui-tree-node-ctrl rui-tree-node-throttle-sub-tree=true class=rui-tree-node><div class=rui-tree-node-container><div rui-tree-node-content=rui-tree-node-content class=rui-tree-node-content></div></div><div class=rui-tree-node-sub-tree-placeholder></div></li>"
+  );
+
+
+  $templateCache.put('rui/tree/templates/searchContent.html',
+    "<span ng-bind-html=$ruiTreeNode.state.searchMatchName ng-if=\"$ruiTree.rootState.isSearching &amp;&amp; $ruiTreeNode.state.searchMatch\" class=name-with-match></span>"
   );
 
 

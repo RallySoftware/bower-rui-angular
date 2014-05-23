@@ -7,68 +7,59 @@
   var RuiAlmProjectPickerCtrl,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
-  angular.module('rui.alm.projectPicker.controllers.projectPicker', ['rui.alm.projectPicker.factories.treeSearch']).controller('RuiAlmProjectPickerCtrl', RuiAlmProjectPickerCtrl = (function() {
-    function RuiAlmProjectPickerCtrl($scope, $timeout, ruiAlmProjectPickerTreeSearchFactory, $log, $q) {
+  angular.module('rui.alm.projectPicker.controllers.projectPicker', []).controller('RuiAlmProjectPickerCtrl', RuiAlmProjectPickerCtrl = (function() {
+    function RuiAlmProjectPickerCtrl($scope, $timeout, $log, $q) {
       this.$scope = $scope;
       this.$timeout = $timeout;
-      this.ruiAlmProjectPickerTreeSearchFactory = ruiAlmProjectPickerTreeSearchFactory;
       this.$log = $log;
       this.$q = $q;
-      this.search = __bind(this.search, this);
       this.clearSearch = __bind(this.clearSearch, this);
+      this.watchSearchTerm = __bind(this.watchSearchTerm, this);
       this.watchSelectedNode = __bind(this.watchSelectedNode, this);
-      this.selectNode = __bind(this.selectNode, this);
       this.setDropdownIsOpen = __bind(this.setDropdownIsOpen, this);
       this.focusOut = __bind(this.focusOut, this);
       this.toggleDropdown = __bind(this.toggleDropdown, this);
       this.updateWorkspaces = __bind(this.updateWorkspaces, this);
-      this.getNodeState = __bind(this.getNodeState, this);
-      this.selectedPath = [];
-      this.parentIndex = {};
-      this.nodeIndex = {};
+      this.onSearchInProgress = __bind(this.onSearchInProgress, this);
+      this.onSelectedNode = __bind(this.onSelectedNode, this);
+      this.selectNode = __bind(this.selectNode, this);
+      this.watchDropdownToExpand = __bind(this.watchDropdownToExpand, this);
       this.$scope.$ruiAlmProjectPicker = {
         dropdownIsOpen: false,
         useDropdown: true,
         toggleDropdown: this.toggleDropdown,
         onBlur: this.onBlur,
-        _nodeState: {},
-        getNodeState: this.getNodeState,
-        selectNode: this.selectNode,
-        selectNodeByOid: this.selectNodeByOid,
         clearSearch: this.clearSearch
       };
       this.$scope.$watch('$ruiAlmProjectPicker.selectedNode', this.watchSelectedNode);
-      this.$scope.$watch('$ruiAlmProjectPicker.searchTerm', this.search);
+      this.$scope.$watch('$ruiAlmProjectPicker.searchTerm', this.watchSearchTerm);
+      this.$scope.$watch('$ruiAlmProjectPicker.dropdownIsOpen', this.watchDropdownToExpand);
+      this.$scope.$on('rui-tree:selectedNode', this.onSelectedNode);
+      this.$scope.$on('rui-tree:searchInProgress', this.onSearchInProgress);
     }
 
-    RuiAlmProjectPickerCtrl.prototype.getNodeState = function(node) {
-      var oid, state;
-      oid = node.oid != null ? node.oid : node;
-      oid = "" + oid;
-      state = this.$scope.$ruiAlmProjectPicker._nodeState[oid];
-      if (state == null) {
-        state = {};
+    RuiAlmProjectPickerCtrl.prototype.watchDropdownToExpand = function(isOpen, oldIsOpen) {
+      if ((this.$scope.$ruiAlmProjectPicker.selectedNode != null) && isOpen && !oldIsOpen) {
+        return this.$scope.$broadcast('rui-tree:expand-to-node', this.$scope.$ruiAlmProjectPicker.selectedNode);
       }
-      return this.$scope.$ruiAlmProjectPicker._nodeState[oid] = state;
+    };
+
+    RuiAlmProjectPickerCtrl.prototype.selectNode = function(node) {
+      return this.$scope.$ruiAlmProjectPicker.selectedNode = node;
+    };
+
+    RuiAlmProjectPickerCtrl.prototype.onSelectedNode = function(event, selectedNode) {
+      this.$scope.$ruiAlmProjectPicker.dropdownIsOpen = false;
+      return event.stopPropagation();
+    };
+
+    RuiAlmProjectPickerCtrl.prototype.onSearchInProgress = function(event, searchInProgress) {
+      this.$scope.$ruiAlmProjectPicker.searchInProgress = searchInProgress;
+      return event.stopPropagation();
     };
 
     RuiAlmProjectPickerCtrl.prototype.updateWorkspaces = function(workspaces) {
-      var index,
-        _this = this;
-      this.$scope.$ruiAlmProjectPicker.workspaces = workspaces;
-      index = function(node) {
-        _this.nodeIndex[node.oid] = node;
-        return _.each(node.children, function(child) {
-          _this.parentIndex[child.oid] = node;
-          return index(child);
-        });
-      };
-      this.$log.debug('Project picker indexing nodes');
-      _.each(workspaces, index);
-      this.selectNode(this.$scope.$ruiAlmProjectPicker.selectedNode);
-      this.search(this.$scope.$ruiAlmProjectPicker.searchTerm);
-      this.$log.debug('Project picker indexing finished');
-      return this.$q.when();
+      return this.$scope.$ruiAlmProjectPicker.workspaces = workspaces;
     };
 
     RuiAlmProjectPickerCtrl.prototype.toggleDropdown = function($event) {
@@ -88,60 +79,16 @@
       return this.$scope.$ruiAlmProjectPicker.dropdownIsOpen = value;
     };
 
-    RuiAlmProjectPickerCtrl.prototype.selectNode = function(node) {
-      var bubbleSelection,
-        _this = this;
-      _.each(this.selectedPath, function(selectedNode) {
-        var state;
-        state = _this.getNodeState(selectedNode);
-        state.selected = false;
-        state.inSelectPath = false;
-      });
-      this.selectedPath = [];
-      if (node != null) {
-        this.getNodeState(node).selected = true;
-        bubbleSelection = function(toBubble) {
-          var bubbleState;
-          _this.selectedPath.push(toBubble);
-          bubbleState = _this.getNodeState(toBubble);
-          bubbleState.inSelectPath = true;
-          if (_this.parentIndex[toBubble.oid]) {
-            return bubbleSelection(_this.parentIndex[toBubble.oid]);
-          }
-        };
-        bubbleSelection(node);
-      }
-      return this.$scope.$ruiAlmProjectPicker.selectedNode = this.nodeIndex[node != null ? node.oid : void 0] != null ? this.nodeIndex[node.oid] : node;
-    };
-
     RuiAlmProjectPickerCtrl.prototype.watchSelectedNode = function(node) {
       return this.$scope.$ruiAlmProjectPicker.triggerText = (node != null ? node.name : void 0) ? node.name : '[no project selected]';
     };
 
-    RuiAlmProjectPickerCtrl.prototype.clearSearch = function() {
-      return this.$scope.$ruiAlmProjectPicker.searchTerm = '';
+    RuiAlmProjectPickerCtrl.prototype.watchSearchTerm = function(term) {
+      return this.$scope.$ruiAlmProjectPicker.isSearching = !!term;
     };
 
-    RuiAlmProjectPickerCtrl.prototype.search = function(term) {
-      var mySearch, _ref,
-        _this = this;
-      this.$scope.$ruiAlmProjectPicker.isSearching = !!term;
-      if ((_ref = this.currentSearch) != null) {
-        if (typeof _ref.cancel === "function") {
-          _ref.cancel();
-        }
-      }
-      if (term) {
-        this.$scope.$ruiAlmProjectPicker.searchInProgress = true;
-        mySearch = this.currentSearch = this.ruiAlmProjectPickerTreeSearchFactory(term, this);
-        return this.currentSearch.search({
-          children: this.$scope.$ruiAlmProjectPicker.workspaces
-        }, 1000)['finally'](function(state) {
-          if (mySearch === _this.currentSearch) {
-            return _this.$scope.$ruiAlmProjectPicker.searchInProgress = false;
-          }
-        });
-      }
+    RuiAlmProjectPickerCtrl.prototype.clearSearch = function() {
+      return this.$scope.$ruiAlmProjectPicker.searchTerm = '';
     };
 
     return RuiAlmProjectPickerCtrl;
@@ -151,120 +98,12 @@
 }).call(this);
 
 (function() {
-  var RuiAlmProjectPickerNodeCtrl,
-    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
-
-  angular.module('rui.alm.projectPicker.controllers.projectPickerNode', []).controller('RuiAlmProjectPickerNodeCtrl', RuiAlmProjectPickerNodeCtrl = (function() {
-    function RuiAlmProjectPickerNodeCtrl($scope, $compile) {
-      this.$scope = $scope;
-      this.$compile = $compile;
-      this.selectNode = __bind(this.selectNode, this);
-      this.watchSelection = __bind(this.watchSelection, this);
-      this.watchChildrenAndSearchToShowSubTree = __bind(this.watchChildrenAndSearchToShowSubTree, this);
-      this.watchSearchAndMatch = __bind(this.watchSearchAndMatch, this);
-      this.watchChildrenAndExpand = __bind(this.watchChildrenAndExpand, this);
-      this.toggleExpand = __bind(this.toggleExpand, this);
-      this.getState = __bind(this.getState, this);
-      this.getNode = __bind(this.getNode, this);
-      this.watchOidAndUpdateState = __bind(this.watchOidAndUpdateState, this);
-      this.subTreeTemplate = '<ul class="rui-tree-node-subtree" rui-alm-project-picker-tree="$ruiTreeNode.node" ng-show="$ruiTreeNode.showChildren"/>';
-      this.$scope.$ruiAlmProjectPickerNode = {
-        toggleExpand: this.toggleExpand,
-        state: null,
-        selectNode: this.selectNode
-      };
-      this.$scope.$watch('$ruiTreeNode.node.oid', this.watchOidAndUpdateState);
-      this.$scope.$watch('$ruiAlmProjectPickerNode.toggleDisabled', this.watchChildrenAndExpand);
-      this.$scope.$watch('$ruiTreeNode.hasChildren', this.watchChildrenAndExpand);
-      this.$scope.$watch('$ruiAlmProjectPickerNode.state.expand', this.watchChildrenAndExpand);
-      this.$scope.$watch('$ruiAlmProjectPickerNode.state.inSearchMatchPath', this.watchSearchAndMatch);
-      this.$scope.$watch('$ruiAlmProjectPicker.isSearching', this.watchSearchAndMatch);
-      this.$scope.$watch('$ruiTreeNode.showChildren', this.watchChildrenAndSearchToShowSubTree);
-      this.$scope.$watch('$ruiAlmProjectPickerNode.hasChildrenAndExpanded', this.watchChildrenAndSearchToShowSubTree);
-      this.$scope.$watch('$ruiAlmProjectPickerNode.inSearchAndMatch', this.watchChildrenAndSearchToShowSubTree);
-      this.$scope.$watch('$ruiAlmProjectPickerNode.state.selected', this.watchSelection);
-      this.$scope.$watch('$ruiAlmProjectPickerNode.state.inSelectPath', this.watchSelection);
-    }
-
-    RuiAlmProjectPickerNodeCtrl.prototype.watchOidAndUpdateState = function(oid) {
-      if (oid) {
-        return this.$scope.$ruiAlmProjectPickerNode.state = this.$scope.$ruiAlmProjectPicker.getNodeState(oid);
-      }
-    };
-
-    RuiAlmProjectPickerNodeCtrl.prototype.getNode = function() {
-      return this.$scope.$ruiTreeNode.node;
-    };
-
-    RuiAlmProjectPickerNodeCtrl.prototype.getState = function() {
-      return this.$scope.$ruiAlmProjectPickerNode.state;
-    };
-
-    RuiAlmProjectPickerNodeCtrl.prototype.toggleExpand = function() {
-      var state;
-      if (this.$scope.$ruiAlmProjectPickerNode.toggleDisabled) {
-        return;
-      }
-      state = this.getState();
-      return state.expand = !state.expand;
-    };
-
-    RuiAlmProjectPickerNodeCtrl.prototype.watchChildrenAndExpand = function() {
-      var canCollapse, canExpand, canToggleExpand, expanded, hasChildren, hasChildrenAndExpanded, _ref;
-      hasChildren = this.$scope.$ruiTreeNode.hasChildren;
-      expanded = (_ref = this.$scope.$ruiAlmProjectPickerNode.state) != null ? _ref.expand : void 0;
-      hasChildrenAndExpanded = this.$scope.$ruiAlmProjectPickerNode.hasChildrenAndExpanded = hasChildren && expanded;
-      canExpand = this.$scope.$ruiAlmProjectPickerNode.canExpand = hasChildren && !expanded;
-      canCollapse = this.$scope.$ruiAlmProjectPickerNode.canCollapse = hasChildren && expanded;
-      return canToggleExpand = this.$scope.$ruiAlmProjectPickerNode.canToggleExpand = canExpand || canCollapse;
-    };
-
-    RuiAlmProjectPickerNodeCtrl.prototype.watchSearchAndMatch = function() {
-      var inSearchMatchPath, isSearching, _ref;
-      inSearchMatchPath = (_ref = this.$scope.$ruiAlmProjectPickerNode.state) != null ? _ref.inSearchMatchPath : void 0;
-      isSearching = this.$scope.$ruiAlmProjectPicker.isSearching;
-      this.$scope.$ruiAlmProjectPickerNode.inSearchAndMatch = isSearching && inSearchMatchPath;
-      return this.$scope.$ruiAlmProjectPickerNode.showNode = isSearching ? inSearchMatchPath : true;
-    };
-
-    RuiAlmProjectPickerNodeCtrl.prototype.watchChildrenAndSearchToShowSubTree = function() {
-      var hasChildrenAndExpanded, inSearchAndMatch;
-      hasChildrenAndExpanded = this.$scope.$ruiAlmProjectPickerNode.hasChildrenAndExpanded;
-      inSearchAndMatch = this.$scope.$ruiAlmProjectPickerNode.inSearchAndMatch;
-      return this.$scope.$ruiTreeNode.showChildren = hasChildrenAndExpanded || inSearchAndMatch;
-    };
-
-    RuiAlmProjectPickerNodeCtrl.prototype.watchSelection = function() {
-      var state;
-      state = this.getState();
-      if (state != null) {
-        if (state.inSelectPath && !state.selected) {
-          state.expand = true;
-        }
-        return this.$scope.$ruiAlmProjectPickerNode.toggleDisabled = state.inSelectPath && !state.selected;
-      }
-    };
-
-    RuiAlmProjectPickerNodeCtrl.prototype.selectNode = function() {
-      var node;
-      node = this.getNode();
-      this.$scope.$ruiAlmProjectPicker.selectNode(node);
-      return this.$scope.$ruiAlmProjectPicker.dropdownIsOpen = false;
-    };
-
-    return RuiAlmProjectPickerNodeCtrl;
-
-  })());
+  angular.module('rui.alm.projectPicker.controllers', ['rui.alm.projectPicker.controllers.projectPicker']);
 
 }).call(this);
 
 (function() {
-  angular.module('rui.alm.projectPicker.controllers', ['rui.alm.projectPicker.controllers.projectPicker', 'rui.alm.projectPicker.controllers.projectPickerNode']);
-
-}).call(this);
-
-(function() {
-  angular.module('rui.alm.projectPicker.directives', ['rui.alm.projectPicker.directives.projectPicker', 'rui.alm.projectPicker.directives.projectPickerNode', 'rui.alm.projectPicker.directives.projectPickerTree']);
+  angular.module('rui.alm.projectPicker.directives', ['rui.alm.projectPicker.directives.projectPicker', 'rui.alm.projectPicker.directives.projectPickerNode', 'rui.alm.projectPicker.directives.projectPickerTree', 'rui.alm.projectPicker.directives.projectPickerContent']);
 
 }).call(this);
 
@@ -282,7 +121,12 @@
 								$scope.workspaces = [
 									{oid: 'A', name: 'WorkspaceA', isWorkspace: true, children: [{oid: 'A.1', name: 'Project A.1', children:[{oid: 'A.1.a', name: 'Project A.1.a'}]},{oid: 'A.1.b', name: 'Project A.1.b'}]},
 									{oid: 'B', name: 'WorkspaceB', isWorkspace: true}
-								]								
+								]
+
+								$scope.state = {
+									theSelectedProject: $scope.workspaces[0].children[0]
+								}
+
 							}
 						);
 				</file>
@@ -290,7 +134,8 @@
 						<div ng-controller="Ctrl">
 
 							<h3>Default</h3>
-							<div rui-alm-project-picker="workspaces" rui-project-picker-open="true" />
+							<div>You have selected {{state.theSelectedProject.name}}</div>
+							<div rui-alm-project-picker="workspaces" rui-project-picker-open="true" rui-alm-project-picker-selected="state.theSelectedProject"/>
 
 						</div>
 				</file>
@@ -299,13 +144,12 @@
 
 
 (function() {
-  angular.module('rui.alm.projectPicker.directives.projectPicker', ['rui.templates', 'rui.util.bootstrap', 'rui.util.template', 'rui.tree', 'rui.alm.projectPicker.controllers.projectPicker', 'rui.alm.projectPicker.factories.treeBuilder', 'rui.util.element.directives.focusMe']).directive('ruiAlmProjectPickerCtrl', function($parse, ruiAlmProjectPickerTreeBuilder) {
+  angular.module('rui.alm.projectPicker.directives.projectPicker', ['rui.templates', 'rui.util.bootstrap', 'rui.tree', 'rui.alm.projectPicker.controllers.projectPicker', 'rui.alm.projectPicker.factories.treeBuilder', 'rui.util.element.directives.focusMe']).directive('ruiAlmProjectPickerCtrl', function($parse, ruiAlmProjectPickerTreeBuilder) {
     return {
       restrict: 'EA',
       require: ['ruiAlmProjectPickerCtrl'],
       scope: true,
       controller: 'RuiAlmProjectPickerCtrl',
-      ruiTemplate: true,
       link: function($scope, $element, $attrs, _arg) {
         var controller, expression,
           _this = this;
@@ -352,8 +196,12 @@
     return {
       replace: true,
       templateUrl: 'rui/alm/projectPicker/templates/projectPicker.html',
+      scope: true,
       compile: function($element, $attrs) {
-        return $attrs.$set('ruiAlmProjectPickerRoot', $attrs.ruiAlmProjectPicker);
+        $attrs.$set('ruiAlmProjectPickerRoot', $attrs.ruiAlmProjectPicker);
+        if ($attrs.ruiAlmProjectPickerAllowDeselect) {
+          return $element.find('.rui-tree').attr('rui-tree-selectable', 'deselect');
+        }
       }
     };
   });
@@ -361,26 +209,10 @@
 }).call(this);
 
 (function() {
-  angular.module('rui.alm.projectPicker.directives.projectPickerNode', ['rui.alm.projectPicker.controllers.projectPickerNode', 'rui.tree']).directive('ruiAlmProjectPickerNodeCtrl', function() {
+  angular.module('rui.alm.projectPicker.directives.projectPickerContent', []).directive('ruiAlmProjectPickerContent', function() {
     return {
-      restrict: 'A',
-      scope: true,
-      require: ['ruiAlmProjectPickerNodeCtrl', 'ruiTreeNodeCtrl'],
-      controller: 'RuiAlmProjectPickerNodeCtrl',
-      link: function($scope, $element, $attrs, _arg) {
-        var controller, treeNodeController;
-        controller = _arg[0], treeNodeController = _arg[1];
-        return treeNodeController.subTreeTemplate = controller.subTreeTemplate;
-      }
-    };
-  }).directive('ruiAlmProjectPickerNode', function() {
-    return {
-      restrict: 'EA',
-      replace: true,
-      templateUrl: 'rui/alm/projectPicker/templates/projectPickerNode.html',
-      require: ['ruiAlmProjectPickerNodeCtrl'],
       compile: function($element, $attrs) {
-        $attrs.$set('ruiTreeNodeRoot', $attrs.ruiAlmProjectPickerNode);
+        $element.append('<span class="is-workspace" ng-if="$ruiTreeNode.node.isWorkspace">&nbsp;(workspace)</span>');
         return function() {};
       }
     };
@@ -389,19 +221,11 @@
 }).call(this);
 
 (function() {
-  angular.module('rui.alm.projectPicker.directives.projectPickerTree', ['rui.tree']).directive('ruiAlmProjectPickerTreeCtrl', function() {
+  angular.module('rui.alm.projectPicker.directives.projectPickerNode', []).directive('ruiAlmProjectPickerNode', function() {
     return {
-      restrict: 'A',
-      scope: true,
-      link: function($scope, $element, $attrs) {}
-    };
-  }).directive('ruiAlmProjectPickerTree', function() {
-    return {
-      restrict: 'EA',
-      replace: true,
-      templateUrl: 'rui/alm/projectPicker/templates/projectPickerTree.html',
+      require: ['ruiTreeNodeCtrl'],
       compile: function($element, $attrs) {
-        $attrs.$set('ruiTreeRoot', $attrs.ruiAlmProjectPickerTree);
+        $element.find('.rui-tree-node-content').attr('rui-alm-project-picker-content', '');
         return function() {};
       }
     };
@@ -410,7 +234,20 @@
 }).call(this);
 
 (function() {
-  angular.module('rui.alm.projectPicker.factories', ['rui.alm.projectPicker.factories.treeBuilder', 'rui.alm.projectPicker.factories.treeSearch']);
+  angular.module('rui.alm.projectPicker.directives.projectPickerTree', []).directive('ruiAlmProjectPickerTree', function() {
+    return {
+      require: ['ruiTreeCtrl'],
+      compile: function($element, $attrs) {
+        $element.find('.rui-tree-nodes').attr('rui-alm-project-picker-node', '');
+        return function() {};
+      }
+    };
+  });
+
+}).call(this);
+
+(function() {
+  angular.module('rui.alm.projectPicker.factories', ['rui.alm.projectPicker.factories.treeBuilder']);
 
 }).call(this);
 
@@ -719,111 +556,6 @@
     return factory;
   }).factory('ruiAlmProjectPickerTreeBuilder', function(ruiAlmProjectPickerTreeBuilderFactory) {
     return ruiAlmProjectPickerTreeBuilderFactory();
-  });
-
-}).call(this);
-
-(function() {
-  var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
-
-  angular.module('rui.alm.projectPicker.factories.treeSearch', ['rui.util.filters.regExpEscape', 'rui.util.lodash', 'ngSanitize']).factory('ruiAlmProjectPickerTreeSearchFactory', function($injector) {
-    var RuiAlmProjectPickerTreeSearch, factory;
-    RuiAlmProjectPickerTreeSearch = (function() {
-      function RuiAlmProjectPickerTreeSearch($timeout, $log, $filter, $rootScope, $q, projectPicker, term) {
-        this.$timeout = $timeout;
-        this.$log = $log;
-        this.$rootScope = $rootScope;
-        this.$q = $q;
-        this.projectPicker = projectPicker;
-        this.term = term;
-        this.searchExp = __bind(this.searchExp, this);
-        this.escapeSearchTerm = __bind(this.escapeSearchTerm, this);
-        this.cancel = __bind(this.cancel, this);
-        this._searchChildren = __bind(this._searchChildren, this);
-        this._search = __bind(this._search, this);
-        this.search = __bind(this.search, this);
-        this.$regExpEscape = $filter('regExpEscape');
-        this.expression = this.searchExp(this.term);
-      }
-
-      RuiAlmProjectPickerTreeSearch.prototype.search = function(root, delay) {
-        var run,
-          _this = this;
-        run = function() {
-          return _this._search(root);
-        };
-        if (delay) {
-          return this.$timeout(run, delay, false);
-        } else {
-          return run(root);
-        }
-      };
-
-      RuiAlmProjectPickerTreeSearch.prototype._search = function(root) {
-        var expression, name, state;
-        if (this.cancelled) {
-          return this.$q.when();
-        }
-        if (root.name) {
-          expression = this.expression;
-          name = root.name;
-          state = this.projectPicker.getNodeState(root);
-          state.searchMatch = expression.test(name);
-          state.searchMatchName = state.searchMatch ? root.name.replace(expression, "<span class='search-match'>$&</span>") : null;
-        }
-        return this.$q.when(this._searchChildren(root));
-      };
-
-      RuiAlmProjectPickerTreeSearch.prototype._searchChildren = function(root) {
-        var children,
-          _this = this;
-        children = root.children || [];
-        return this.$timeout(function() {
-          var childSearches;
-          if (_this.cancelled) {
-            return _this.$q.when();
-          }
-          childSearches = _.map(children, function(child) {
-            return _this._search(child);
-          });
-          return _this.$q.all(childSearches).then(function(childStates) {
-            var state;
-            if (_this.cancelled) {
-              return _this.$q.when();
-            }
-            state = root.oid ? _this.projectPicker.getNodeState(root) : {};
-            state.inSearchMatchPath = state.searchMatch || _.any(childStates, 'inSearchMatchPath');
-            return _this.$q.when(state);
-          });
-        }, 0, false);
-      };
-
-      RuiAlmProjectPickerTreeSearch.prototype.cancel = function() {
-        return this.cancelled = true;
-      };
-
-      RuiAlmProjectPickerTreeSearch.prototype.escapeSearchTerm = function(term) {
-        return this.$regExpEscape(term);
-      };
-
-      RuiAlmProjectPickerTreeSearch.prototype.searchExp = function(term) {
-        var escaped;
-        escaped = this.escapeSearchTerm(term);
-        return new RegExp(escaped, 'gi');
-      };
-
-      return RuiAlmProjectPickerTreeSearch;
-
-    })();
-    factory = function(term, projectPicker) {
-      var instance, locals;
-      locals = {
-        term: term,
-        projectPicker: projectPicker
-      };
-      return instance = $injector.instantiate(RuiAlmProjectPickerTreeSearch, locals);
-    };
-    return factory;
   });
 
 }).call(this);
@@ -1715,7 +1447,7 @@
 }).call(this);
 
 (function() {
-  angular.module('rui.forms', ['rui.forms.input']);
+  angular.module('rui.forms', ['rui.forms.input', 'rui.forms.select']);
 
 }).call(this);
 
@@ -2201,6 +1933,31 @@
     return NgModelHelper;
 
   })());
+
+}).call(this);
+
+(function() {
+  angular.module('rui.forms.select.directives', ['rui.forms.select.directives.select']);
+
+}).call(this);
+
+(function() {
+  angular.module('rui.forms.select.directives.select', []).directive('ngDisabled', function() {
+    return function($scope, $element, $attrs) {
+      return $scope.$watch($attrs['ngDisabled'], function(disabled) {
+        if (disabled) {
+          return $element.attr('disabled', 'disabled');
+        } else {
+          return $element.removeAttr('disabled');
+        }
+      });
+    };
+  });
+
+}).call(this);
+
+(function() {
+  angular.module('rui.forms.select', ['rui.forms.select.directives']);
 
 }).call(this);
 
@@ -3072,11 +2829,48 @@
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
   angular.module('rui.tree.controllers.tree', ['rui.util.lodash']).controller('RuiTreeCtrl', RuiTreeCtrl = (function() {
-    function RuiTreeCtrl($scope) {
+    function RuiTreeCtrl($scope, $log) {
+      var isRootTree, rootState, state, _ref, _ref1;
       this.$scope = $scope;
+      this.$log = $log;
+      this.setTrackBy = __bind(this.setTrackBy, this);
+      this.trackBy = __bind(this.trackBy, this);
+      this.getNodeState = __bind(this.getNodeState, this);
+      this.getNodeId = __bind(this.getNodeId, this);
+      this.getParent = __bind(this.getParent, this);
+      this.getIndexedNode = __bind(this.getIndexedNode, this);
+      this.updateIndex = __bind(this.updateIndex, this);
       this.updateRoot = __bind(this.updateRoot, this);
-      this.$scope.$ruiTree = {};
+      this.index = __bind(this.index, this);
+      isRootTree = this.$scope.$ruiTree == null;
+      rootState = ((_ref = this.$scope.$ruiTree) != null ? _ref.rootState : void 0) || {};
+      state = ((_ref1 = this.$scope.$ruiTree) != null ? _ref1.state : void 0) || {};
+      if (rootState.index == null) {
+        rootState.index = {};
+      }
+      if (rootState.parentIndex == null) {
+        rootState.parentIndex = {};
+      }
+      this.$scope.$ruiTree = {
+        state: state,
+        isRootTree: isRootTree,
+        rootState: rootState,
+        getNodeState: this.getNodeState,
+        getNodeId: this.getNodeId,
+        getParent: this.getParent,
+        getIndexedNode: this.getIndexedNode
+      };
+      this.$scope.$watch('$ruiTree.root', this.updateIndex);
     }
+
+    RuiTreeCtrl.prototype.index = function(node) {
+      var _this = this;
+      this.$scope.$ruiTree.rootState.index[this.getNodeId(node)] = node;
+      return _.each(node.children, function(child) {
+        _this.$scope.$ruiTree.rootState.parentIndex[_this.getNodeId(child)] = node;
+        return _this.index(child);
+      });
+    };
 
     RuiTreeCtrl.prototype.updateRoot = function(root) {
       if (root == null) {
@@ -3090,10 +2884,174 @@
       if (root.children == null) {
         root.children = [];
       }
+      this.$scope.$ruiTree.rootState.isIndexed = this.$scope.$ruiTree.root === root;
       return this.$scope.$ruiTree.root = root;
     };
 
+    RuiTreeCtrl.prototype.updateIndex = function(root) {
+      var _this = this;
+      if (this.$scope.$ruiTree.isRootTree) {
+        _.each(root != null ? root.children : void 0, function(node) {
+          return _this.index(node);
+        });
+        this.$scope.$ruiTree.rootState.isIndexed = true;
+        return this.$scope.$emit('rui-tree:index');
+      }
+    };
+
+    RuiTreeCtrl.prototype.getIndexedNode = function(node) {
+      return this.$scope.$ruiTree.rootState.index[this.getNodeId(node)];
+    };
+
+    RuiTreeCtrl.prototype.getParent = function(node) {
+      return this.$scope.$ruiTree.rootState.parentIndex[this.getNodeId(node)];
+    };
+
+    RuiTreeCtrl.prototype.getNodeId = function(node) {
+      var id;
+      node.$$hashKey = "" + (this.trackBy(node));
+      id = (node != null ? node.$$hashKey : void 0) != null ? node.$$hashKey : node;
+      id = "" + id;
+      return id;
+    };
+
+    RuiTreeCtrl.prototype.getNodeState = function(node) {
+      var id, state;
+      id = this.getNodeId(node);
+      state = this.$scope.$ruiTree.state[id];
+      if (state == null) {
+        state = {};
+      }
+      return this.$scope.$ruiTree.state[id] = state;
+    };
+
+    RuiTreeCtrl.prototype.trackBy = function(node) {
+      return this.$scope.$ruiTree.rootState.trackBy(node);
+    };
+
+    RuiTreeCtrl.prototype.setTrackBy = function(trackBy) {
+      if (this.$scope.$ruiTree.isRootTree) {
+        return this.$scope.$ruiTree.rootState.trackBy = trackBy;
+      }
+    };
+
     return RuiTreeCtrl;
+
+  })());
+
+}).call(this);
+
+(function() {
+  var RuiTreeExpandCollapseCtrl, RuiTreeNodeExpandCollapseCtrl,
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+
+  angular.module('rui.tree.controllers.expandCollapse', ['rui.util.lodash']).controller('RuiTreeExpandCollapseCtrl', RuiTreeExpandCollapseCtrl = (function() {
+    function RuiTreeExpandCollapseCtrl($scope, $timeout) {
+      this.$scope = $scope;
+      this.$timeout = $timeout;
+      this.getParent = __bind(this.getParent, this);
+      this.getNodeState = __bind(this.getNodeState, this);
+      this.expandTo = __bind(this.expandTo, this);
+      this.expand = __bind(this.expand, this);
+      this.onExpandEvent = __bind(this.onExpandEvent, this);
+      this.onExpandToEvent = __bind(this.onExpandToEvent, this);
+      if (this.$scope.$ruiTree.isRootTree) {
+        this.$scope.$on('rui-tree:expand-to-node', this.onExpandToEvent);
+        this.$scope.$on('rui-tree:expand-node', this.onExpandEvent);
+      }
+    }
+
+    RuiTreeExpandCollapseCtrl.prototype.onExpandToEvent = function($event, nodes) {
+      var _this = this;
+      nodes = _.isArray(nodes) ? nodes : [nodes];
+      return this.$timeout(function() {
+        return _.each(nodes, function(node) {
+          return _this.expandTo(node);
+        });
+      });
+    };
+
+    RuiTreeExpandCollapseCtrl.prototype.onExpandEvent = function($event, nodes) {
+      var _this = this;
+      nodes = _.isArray(nodes) ? nodes : [nodes];
+      return this.$timeout(function() {
+        return _.each(nodes, function(node) {
+          return _this.expand(node);
+        });
+      });
+    };
+
+    RuiTreeExpandCollapseCtrl.prototype.expand = function(node) {
+      return this.getNodeState(node).expand = true;
+    };
+
+    RuiTreeExpandCollapseCtrl.prototype.expandTo = function(expandTo) {
+      var node, _results;
+      node = this.getParent(expandTo);
+      _results = [];
+      while (node != null) {
+        this.expand(node);
+        _results.push(node = this.getParent(node));
+      }
+      return _results;
+    };
+
+    RuiTreeExpandCollapseCtrl.prototype.getNodeState = function(node) {
+      return this.$scope.$ruiTree.getNodeState(node);
+    };
+
+    RuiTreeExpandCollapseCtrl.prototype.getParent = function(node) {
+      return this.$scope.$ruiTree.getParent(node);
+    };
+
+    return RuiTreeExpandCollapseCtrl;
+
+  })()).controller('RuiTreeNodeExpandCollapseCtrl', RuiTreeNodeExpandCollapseCtrl = (function() {
+    function RuiTreeNodeExpandCollapseCtrl($scope) {
+      this.$scope = $scope;
+      this.watchToShowSubTree = __bind(this.watchToShowSubTree, this);
+      this.watchChildrenAndExpand = __bind(this.watchChildrenAndExpand, this);
+      this.toggleExpand = __bind(this.toggleExpand, this);
+      this.getState = __bind(this.getState, this);
+      _.assign(this.$scope.$ruiTreeNode, {
+        toggleExpand: this.toggleExpand
+      });
+      this.$scope.$watch('$ruiTreeNode.hasChildren', this.watchChildrenAndExpand);
+      this.$scope.$watch('$ruiTreeNode.toggleDisabled', this.watchChildrenAndExpand);
+      this.$scope.$watch('$ruiTreeNode.state.expand', this.watchChildrenAndExpand);
+      this.$scope.$watch('$ruiTreeNode.hasChildrenAndExpanded', this.watchToShowSubTree);
+    }
+
+    RuiTreeNodeExpandCollapseCtrl.prototype.getState = function() {
+      return this.$scope.$ruiTreeNode.state;
+    };
+
+    RuiTreeNodeExpandCollapseCtrl.prototype.toggleExpand = function() {
+      var state;
+      if (this.$scope.$ruiTreeNode.toggleDisabled) {
+        return;
+      }
+      state = this.getState();
+      return state.expand = !state.expand;
+    };
+
+    RuiTreeNodeExpandCollapseCtrl.prototype.watchChildrenAndExpand = function() {
+      var canCollapse, canExpand, canToggleExpand, expanded, hasChildren, hasChildrenAndExpanded, _ref;
+      hasChildren = this.$scope.$ruiTreeNode.hasChildren;
+      expanded = (_ref = this.getState()) != null ? _ref.expand : void 0;
+      hasChildrenAndExpanded = this.$scope.$ruiTreeNode.hasChildrenAndExpanded = hasChildren && expanded;
+      canExpand = this.$scope.$ruiTreeNode.canExpand = hasChildren && !expanded;
+      canCollapse = this.$scope.$ruiTreeNode.canCollapse = hasChildren && expanded;
+      return canToggleExpand = this.$scope.$ruiTreeNode.canToggleExpand = canExpand || canCollapse;
+    };
+
+    RuiTreeNodeExpandCollapseCtrl.prototype.watchToShowSubTree = function() {
+      var hasChildrenAndExpanded;
+      hasChildrenAndExpanded = this.$scope.$ruiTreeNode.hasChildrenAndExpanded;
+      return this.$scope.$ruiTreeNode.shouldShowChildren.expand = hasChildrenAndExpanded;
+    };
+
+    return RuiTreeNodeExpandCollapseCtrl;
 
   })());
 
@@ -3113,21 +3071,38 @@
       this.$log = $log;
       this.RuiTreeNodePlaceHolderWarning = RuiTreeNodePlaceHolderWarning;
       this.manageSubTree = __bind(this.manageSubTree, this);
+      this.getSubTreeTemplate = __bind(this.getSubTreeTemplate, this);
       this.shouldShowSubTree = __bind(this.shouldShowSubTree, this);
-      this.watchHasChildren = __bind(this.watchHasChildren, this);
       this.watchChildren = __bind(this.watchChildren, this);
       this.setSubTreePlaceholder = __bind(this.setSubTreePlaceholder, this);
       this.setThrottle = __bind(this.setThrottle, this);
+      this.watchNodeAndUpdateState = __bind(this.watchNodeAndUpdateState, this);
+      this.manageShowChildren = __bind(this.manageShowChildren, this);
       this.subTree = null;
-      this.subTreeTemplate = '<ul class="rui-tree-node-subtree" rui-tree="$ruiTreeNode.node"/>';
+      this.setSubTreeTemplate('<ul class="rui-tree-node-subtree" rui-tree="$ruiTreeNode.node"/>');
+      this.subTreeDirectives = [];
       this.$scope.$ruiTreeNode = {
-        hasChildren: false
+        hasChildren: false,
+        shouldShowChildren: {}
       };
-      this.$scope.$watch('$ruiTreeNode.node.children', this.watchChildren, (_ref = this.$scope.$ruiTree) != null ? _ref.deepWatch : void 0);
-      this.$scope.$watch('$ruiTreeNode.hasChildren', this.watchHasChildren);
-      this.$scope.$watch('$ruiTreeNode.hasChildren', this.manageSubTree);
+      this.$scope.$watch('$ruiTreeNode.node', this.watchNodeAndUpdateState);
+      this.$scope.$watch('$ruiTreeNode.node.children.length', this.watchChildren, (_ref = this.$scope.$ruiTree) != null ? _ref.deepWatch : void 0);
+      this.$scope.$watch('$ruiTreeNode.hasChildren', this.manageShowChildren);
+      this.$scope.$watch('$ruiTreeNode.shouldShowChildren', this.manageShowChildren, true);
       this.$scope.$watch('$ruiTreeNode.showChildren', this.manageSubTree);
     }
+
+    RuiTreeNodeCtrl.prototype.manageShowChildren = function() {
+      var shouldShowChildren;
+      shouldShowChildren = this.$scope.$ruiTreeNode.shouldShowChildren;
+      return this.$scope.$ruiTreeNode.showChildren = this.$scope.$ruiTreeNode.hasChildren && _.any(_.values(shouldShowChildren));
+    };
+
+    RuiTreeNodeCtrl.prototype.watchNodeAndUpdateState = function(node) {
+      if (node) {
+        return this.$scope.$ruiTreeNode.state = this.$scope.$ruiTree.getNodeState(node);
+      }
+    };
 
     RuiTreeNodeCtrl.prototype.setThrottle = function(throttle) {
       if (throttle) {
@@ -3143,18 +3118,38 @@
       this.subTreePlaceholder = subTreePlaceholder;
     };
 
-    RuiTreeNodeCtrl.prototype.watchChildren = function(children) {
-      return this.$scope.$ruiTreeNode.hasChildren = (children != null ? children.length : void 0) > 0;
-    };
-
-    RuiTreeNodeCtrl.prototype.watchHasChildren = function(hasChildren) {
-      return this.$scope.$ruiTreeNode.showChildren = this.$scope.$ruiTreeNode.hasChildren;
+    RuiTreeNodeCtrl.prototype.watchChildren = function(numOfChildren) {
+      return this.$scope.$ruiTreeNode.hasChildren = numOfChildren > 0;
     };
 
     RuiTreeNodeCtrl.prototype.shouldShowSubTree = function() {
       var shouldShow;
       shouldShow = this.$scope.$ruiTreeNode.showChildren || (this.$scope.$ruiTreeNode.hasChildren && this.$scope.$ruiTreeNode.eagerBuild);
       return shouldShow;
+    };
+
+    RuiTreeNodeCtrl.prototype.setSubTreeTemplate = function(template) {
+      return this.subTreeTemplate = template;
+    };
+
+    RuiTreeNodeCtrl.prototype.addSubTreeDirective = function(name, value) {
+      return this.subTreeDirectives.push({
+        name: name,
+        value: value
+      });
+    };
+
+    RuiTreeNodeCtrl.prototype.getSubTreeTemplate = function() {
+      var name, template, value, _i, _len, _ref, _ref1, _ref2;
+      template = $(this.subTreeTemplate);
+      if ((_ref = this.subTreeDirectives) != null ? _ref.length : void 0) {
+        _ref1 = this.subTreeDirectives;
+        for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+          _ref2 = _ref1[_i], name = _ref2.name, value = _ref2.value;
+          template.attr(name, value);
+        }
+      }
+      return template;
     };
 
     RuiTreeNodeCtrl.prototype.manageSubTree = function() {
@@ -3168,7 +3163,7 @@
             if (_this.subTreePlaceholder == null) {
               _this.$log.warn(_this.RuiTreeNodePlaceHolderWarning);
             }
-            return _this.$compile(_this.subTreeTemplate)(_this.$scope.$new(), function(node, scope) {
+            return _this.$compile(_this.getSubTreeTemplate())(_this.$scope.$new(), function(node, scope) {
               var _ref;
               if ((_ref = _this.subTreePlaceholder) != null) {
                 _ref.append(node);
@@ -3196,7 +3191,332 @@
 }).call(this);
 
 (function() {
-  angular.module('rui.tree.controllers', ['rui.tree.controllers.tree', 'rui.tree.controllers.node']);
+  var RuiTreeNodeSearchCtrl, RuiTreeSearchCtrl,
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+
+  angular.module('rui.tree.controllers.search', ['rui.util.lodash', 'rui.tree.factories.search']).controller('RuiTreeSearchCtrl', RuiTreeSearchCtrl = (function() {
+    function RuiTreeSearchCtrl($scope, $parse, ruiTreeSearchFactory) {
+      var _this = this;
+      this.$scope = $scope;
+      this.$parse = $parse;
+      this.ruiTreeSearchFactory = ruiTreeSearchFactory;
+      this.getNodeState = __bind(this.getNodeState, this);
+      this.search = __bind(this.search, this);
+      this.updateSearchTerm = __bind(this.updateSearchTerm, this);
+      this.setSearchAttribute = __bind(this.setSearchAttribute, this);
+      if (this.$scope.$ruiTree.isRootTree) {
+        this.$scope.$watch('$ruiTree.rootState.searchTerm', this.search);
+        this.$scope.$watch('$ruiTree.rootState.searchInProgress', function(searchInProgress) {
+          return _this.$scope.$emit('rui-tree:searchInProgress', searchInProgress);
+        });
+        this.$scope.$on('rui-tree:index', this.search);
+      }
+      this.$scope.$ruiTree.search = this.search;
+    }
+
+    RuiTreeSearchCtrl.prototype.setSearchAttribute = function(attributeValue) {
+      var nodeExp, searchTermExp, _ref;
+      if (!this.$scope.$ruiTree.isRootTree) {
+        return;
+      }
+      _ref = attributeValue.split('search by'), searchTermExp = _ref[0], nodeExp = _ref[1];
+      if (searchTermExp) {
+        searchTermExp = this.$parse(searchTermExp);
+      } else {
+        throw new Error("A search expression was expected like '_searchTerm_ [search by _nodeProperty_]'");
+      }
+      this.nodeExp = nodeExp ? this.$parse(nodeExp) : this.$parse('name');
+      return this.$scope.$watch(searchTermExp, this.updateSearchTerm);
+    };
+
+    RuiTreeSearchCtrl.prototype.updateSearchTerm = function(term) {
+      return this.$scope.$ruiTree.rootState.searchTerm = term;
+    };
+
+    RuiTreeSearchCtrl.prototype.search = function() {
+      var mySearch, term, _ref,
+        _this = this;
+      term = this.$scope.$ruiTree.rootState.searchTerm;
+      this.$scope.$ruiTree.rootState.isSearching = !!term;
+      if ((_ref = this.currentSearch) != null) {
+        if (typeof _ref.cancel === "function") {
+          _ref.cancel();
+        }
+      }
+      if (term) {
+        this.$scope.$ruiTree.rootState.searchInProgress = true;
+        mySearch = this.currentSearch = this.ruiTreeSearchFactory(term, this.nodeExp, this);
+        return this.currentSearch.search(this.$scope.$ruiTree.root, 1000)['finally'](function() {
+          if (mySearch === _this.currentSearch) {
+            return _this.$scope.$ruiTree.rootState.searchInProgress = false;
+          }
+        });
+      }
+    };
+
+    RuiTreeSearchCtrl.prototype.getNodeState = function(node) {
+      return this.$scope.$ruiTree.getNodeState(node);
+    };
+
+    return RuiTreeSearchCtrl;
+
+  })()).controller('RuiTreeNodeSearchCtrl', RuiTreeNodeSearchCtrl = (function() {
+    function RuiTreeNodeSearchCtrl($scope) {
+      this.$scope = $scope;
+      this.watchMatchPathToShowSubTree = __bind(this.watchMatchPathToShowSubTree, this);
+      this.watchSearchAndMatch = __bind(this.watchSearchAndMatch, this);
+      this.$scope.$watch('$ruiTreeNode.state.searchMatch', this.watchSearchAndMatch);
+      this.$scope.$watch('$ruiTreeNode.state.inSearchMatchPath', this.watchSearchAndMatch);
+      this.$scope.$watch('$ruiTree.rootState.isSearching', this.watchSearchAndMatch);
+      this.$scope.$watch('$ruiTreeNode.inSearchAndMatch', this.watchMatchPathToShowSubTree);
+    }
+
+    RuiTreeNodeSearchCtrl.prototype.watchSearchAndMatch = function() {
+      var inSearchMatchPath, isSearchMatch, isSearching, _ref, _ref1;
+      inSearchMatchPath = (_ref = this.$scope.$ruiTreeNode.state) != null ? _ref.inSearchMatchPath : void 0;
+      isSearchMatch = (_ref1 = this.$scope.$ruiTreeNode.state) != null ? _ref1.searchMatch : void 0;
+      isSearching = this.$scope.$ruiTree.rootState.isSearching;
+      this.$scope.$ruiTreeNode.inSearchAndMatch = isSearching && inSearchMatchPath;
+      this.$scope.$ruiTreeNode.showNode = isSearching ? inSearchMatchPath : true;
+      return this.$scope.$ruiTreeNode.showSearchMatch = isSearching && isSearchMatch;
+    };
+
+    RuiTreeNodeSearchCtrl.prototype.watchMatchPathToShowSubTree = function() {
+      var inSearchAndMatch;
+      inSearchAndMatch = this.$scope.$ruiTreeNode.inSearchAndMatch;
+      return this.$scope.$ruiTreeNode.shouldShowChildren.search = inSearchAndMatch;
+    };
+
+    return RuiTreeNodeSearchCtrl;
+
+  })());
+
+}).call(this);
+
+(function() {
+  var RuiTreeNodeSelectionCtrl, RuiTreeSelectionCtrl,
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+    __slice = [].slice;
+
+  angular.module('rui.tree.controllers.selection', ['rui.util.lodash']).controller('RuiTreeSelectionCtrl', RuiTreeSelectionCtrl = (function() {
+    function RuiTreeSelectionCtrl($scope, $parse) {
+      var _base,
+        _this = this;
+      this.$scope = $scope;
+      this.$parse = $parse;
+      this.watchSelectedNodes = __bind(this.watchSelectedNodes, this);
+      this.bubbleSelectPath = __bind(this.bubbleSelectPath, this);
+      this.getParent = __bind(this.getParent, this);
+      this.toggleNodeSelection = __bind(this.toggleNodeSelection, this);
+      this.getIndexedNode = __bind(this.getIndexedNode, this);
+      this.selectNode = __bind(this.selectNode, this);
+      this.getNodeState = __bind(this.getNodeState, this);
+      this.allowDeselect = __bind(this.allowDeselect, this);
+      this.allowMultiSelect = __bind(this.allowMultiSelect, this);
+      this.updateNodesFromIndex = __bind(this.updateNodesFromIndex, this);
+      this.onBindingSelectNodes = __bind(this.onBindingSelectNodes, this);
+      this.onBindingSelectNode = __bind(this.onBindingSelectNode, this);
+      this.getIndexedNode = __bind(this.getIndexedNode, this);
+      this.bindSelectedNodes = __bind(this.bindSelectedNodes, this);
+      this.bindSelectedNode = __bind(this.bindSelectedNode, this);
+      if ((_base = this.$scope.$ruiTree.rootState).selection == null) {
+        _base.selection = {
+          nodes: []
+        };
+      }
+      _.assign(this.$scope.$ruiTree, {
+        toggleNodeSelection: this.toggleNodeSelection,
+        selectNode: this.selectNode
+      });
+      if (this.$scope.$ruiTree.isRootTree) {
+        this.$scope.$watchCollection('$ruiTree.rootState.selection.nodes', this.watchSelectedNodes);
+        this.$scope.$watch('$ruiTree.rootState.selection.node', function(node) {
+          return _this.$scope.$emit('rui-tree:selectedNode', node);
+        });
+        this.$scope.$watchCollection('$ruiTree.rootState.selection.nodes', function(nodes) {
+          return _this.$scope.$emit('rui-tree:selectedNodes', nodes);
+        });
+        this.$scope.$on('rui-tree:index', this.updateNodesFromIndex);
+      }
+    }
+
+    RuiTreeSelectionCtrl.prototype.bindSelectedNode = function(attrExpression) {
+      var expression,
+        _this = this;
+      expression = this.$parse(attrExpression);
+      this.$scope.$watchCollection(expression, function(node) {
+        return _this.onBindingSelectNode(node);
+      });
+      return this.$scope.$watchCollection('$ruiTree.rootState.selection.nodes', function(nodes) {
+        return expression.assign(_this.$scope, _.first(nodes));
+      });
+    };
+
+    RuiTreeSelectionCtrl.prototype.bindSelectedNodes = function(attrExpression) {
+      var expression,
+        _this = this;
+      expression = this.$parse(attrExpression);
+      this.$scope.$watchCollection(expression, function(nodes) {
+        return _this.onBindingSelectNodes(nodes);
+      });
+      return this.$scope.$watchCollection('$ruiTree.rootState.selection.nodes', function(nodes) {
+        return expression.assign(_this.$scope, nodes);
+      });
+    };
+
+    RuiTreeSelectionCtrl.prototype.getIndexedNode = function(node) {
+      return this.$scope.$ruiTree.getIndexedNode(node);
+    };
+
+    RuiTreeSelectionCtrl.prototype.onBindingSelectNode = function(node) {
+      var nodes;
+      nodes = node != null ? [node] : [];
+      return this.onBindingSelectNodes(nodes);
+    };
+
+    RuiTreeSelectionCtrl.prototype.onBindingSelectNodes = function(nodes) {
+      var dirty, toDeselect,
+        _this = this;
+      toDeselect = _.without.apply(_, [this.$scope.$ruiTree.rootState.selection.nodes].concat(__slice.call(nodes != null ? nodes : [])));
+      _.each(toDeselect, function(currentlySelectedNode) {
+        return _this.toggleNodeSelection(currentlySelectedNode);
+      });
+      dirty = false;
+      _.each(nodes, function(toSelect) {
+        if (toSelect !== _this.getIndexedNode(toSelect)) {
+          dirty = true;
+        }
+        return _this.selectNode(toSelect);
+      });
+      if (dirty && this.$scope.$ruiTree.rootState.isIndexed) {
+        return this.updateNodesFromIndex();
+      }
+    };
+
+    RuiTreeSelectionCtrl.prototype.updateNodesFromIndex = function() {
+      var _this = this;
+      return _.each(this.$scope.$ruiTree.rootState.selection.nodes, function(node, i) {
+        var indexedNode;
+        _this.bubbleSelectPath(node, true);
+        indexedNode = _this.getIndexedNode(node);
+        if (indexedNode) {
+          return _this.$scope.$ruiTree.rootState.selection.nodes[i] = indexedNode;
+        }
+      });
+    };
+
+    RuiTreeSelectionCtrl.prototype.allowMultiSelect = function(allow) {
+      if (this.$scope.$ruiTree.isRootTree) {
+        return this.$scope.$ruiTree.rootState.selection.allowMultiSelect = allow;
+      }
+    };
+
+    RuiTreeSelectionCtrl.prototype.allowDeselect = function(allow) {
+      if (this.$scope.$ruiTree.isRootTree) {
+        return this.$scope.$ruiTree.rootState.selection.allowDeselect = allow;
+      }
+    };
+
+    RuiTreeSelectionCtrl.prototype.getNodeState = function(node) {
+      return this.$scope.$ruiTree.getNodeState(node);
+    };
+
+    RuiTreeSelectionCtrl.prototype.selectNode = function(node) {
+      if (!this.getNodeState(node).selected) {
+        return this.toggleNodeSelection(node);
+      }
+    };
+
+    RuiTreeSelectionCtrl.prototype.getIndexedNode = function(node) {
+      return this.$scope.$ruiTree.getIndexedNode(node);
+    };
+
+    RuiTreeSelectionCtrl.prototype.toggleNodeSelection = function(node) {
+      var selection, state,
+        _this = this;
+      selection = this.$scope.$ruiTree.rootState.selection;
+      state = this.getNodeState(node);
+      if (state.selected && !selection.allowDeselect) {
+        return;
+      }
+      state.selected = !state.selected;
+      node = this.getIndexedNode(node) || node;
+      if (selection.allowMultiSelect) {
+        if (state.selected) {
+          selection.nodes = selection.nodes.concat([node]);
+        } else {
+          selection.nodes = _.without(selection.nodes, node);
+        }
+        return this.bubbleSelectPath(node, state.selected);
+      } else {
+        _.each(selection.nodes, function(currentlySelectedNode) {
+          _this.getNodeState(currentlySelectedNode).selected = false;
+          return _this.bubbleSelectPath(currentlySelectedNode, false);
+        });
+        if (state.selected) {
+          selection.nodes = [node];
+          return this.bubbleSelectPath(node, true);
+        } else {
+          return selection.nodes = [];
+        }
+      }
+    };
+
+    RuiTreeSelectionCtrl.prototype.getParent = function(node) {
+      return this.$scope.$ruiTree.getParent(node);
+    };
+
+    RuiTreeSelectionCtrl.prototype.bubbleSelectPath = function(node, inSelectPath) {
+      var parent, state,
+        _this = this;
+      state = this.getNodeState(node);
+      state.inSelectPath = inSelectPath || _(node.children).map(function(n) {
+        return _this.getNodeState(n).inSelectPath;
+      }).any();
+      if (state.inSelectPath && !state.selected) {
+        state.expand = true;
+      }
+      if (state.inSelectPath && !inSelectPath) {
+        return;
+      }
+      parent = this.getParent(node);
+      if (parent) {
+        return this.bubbleSelectPath(parent, inSelectPath);
+      }
+    };
+
+    RuiTreeSelectionCtrl.prototype.watchSelectedNodes = function(nodes) {
+      return this.$scope.$ruiTree.rootState.selection.node = _.first(nodes);
+    };
+
+    return RuiTreeSelectionCtrl;
+
+  })()).controller('RuiTreeNodeSelectionCtrl', RuiTreeNodeSelectionCtrl = (function() {
+    function RuiTreeNodeSelectionCtrl($scope) {
+      this.$scope = $scope;
+      this.getState = __bind(this.getState, this);
+      this.toggleSelection = __bind(this.toggleSelection, this);
+      _.extend(this.$scope.$ruiTreeNode, {
+        toggleSelection: this.toggleSelection
+      });
+    }
+
+    RuiTreeNodeSelectionCtrl.prototype.toggleSelection = function() {
+      return this.$scope.$ruiTree.toggleNodeSelection(this.$scope.$ruiTreeNode.node);
+    };
+
+    RuiTreeNodeSelectionCtrl.prototype.getState = function() {
+      return this.$scope.$ruiTreeNode.state;
+    };
+
+    return RuiTreeNodeSelectionCtrl;
+
+  })());
+
+}).call(this);
+
+(function() {
+  angular.module('rui.tree.controllers', ['rui.tree.controllers.tree', 'rui.tree.controllers.node', 'rui.tree.controllers.expandCollapse', 'rui.tree.controllers.selection', 'rui.tree.controllers.search']);
 
 }).call(this);
 
@@ -3210,14 +3530,14 @@
 
 
 (function() {
-  angular.module('rui.tree.directives.content', ['rui.templates', 'rui.util.template']).directive('ruiTreeNodeContent', function($parse, $compile) {
+  angular.module('rui.tree.directives.content', ['rui.util.template']).directive('ruiTreeNodeContent', function($parse, $compile) {
     return {
       restrict: 'EA',
       require: [],
       scope: false,
       templateUrl: 'rui/tree/templates/content.html',
       replace: true,
-      ruiTemplate: true,
+      priority: 10,
       link: function() {}
     };
   });
@@ -3225,7 +3545,45 @@
 }).call(this);
 
 (function() {
-  angular.module('rui.tree.directives', ['rui.tree.directives.tree', 'rui.tree.directives.node', 'rui.tree.directives.content', 'rui.tree.directives.nodeSubTreePlaceholder']);
+  angular.module('rui.tree.directives.expandCollapse', ['rui.tree.controllers.expandCollapse']).directive('ruiTreeExpandable', function() {
+    return {
+      require: ['ruiTreeCtrl'],
+      controller: 'RuiTreeExpandCollapseCtrl',
+      compile: function($element) {
+        $element.addClass('rui-tree-outline');
+        $element.addClass('rui-tree-expandable');
+        $element.find('.rui-tree-nodes').attr('rui-tree-node-expandable', '');
+        return function() {};
+      }
+    };
+  }).directive('ruiTreeNodeExpandable', function() {
+    return {
+      require: ['ruiTreeNodeCtrl'],
+      compile: function($element) {
+        $element.find('.rui-tree-node-container').prepend('<div rui-tree-node-expand-collapse-toggle="" />');
+        return {
+          pre: function($scope, $element, $attrs, _arg) {
+            var nodeController;
+            nodeController = _arg[0];
+            return nodeController.addSubTreeDirective('rui-tree-expandable', '');
+          }
+        };
+      }
+    };
+  }).directive('ruiTreeNodeExpandCollapseToggle', function() {
+    return {
+      templateUrl: 'rui/tree/templates/expandCollapse.html'
+    };
+  }).directive('ruiTreeNodeExpandCollapseCtrl', function() {
+    return {
+      controller: 'RuiTreeNodeExpandCollapseCtrl'
+    };
+  });
+
+}).call(this);
+
+(function() {
+  angular.module('rui.tree.directives', ['rui.tree.directives.tree', 'rui.tree.directives.node', 'rui.tree.directives.content', 'rui.tree.directives.nodeSubTreePlaceholder', 'rui.tree.directives.expandCollapse', 'rui.tree.directives.selection', 'rui.tree.directives.search']);
 
 }).call(this);
 
@@ -3246,6 +3604,7 @@
       scope: true,
       require: ['ruiTreeNodeCtrl', '^ruiTreeCtrl'],
       controller: 'RuiTreeNodeCtrl',
+      priority: 10,
       link: function($scope, $element, $attrs, _arg) {
         var controller;
         controller = _arg[0];
@@ -3267,6 +3626,7 @@
       templateUrl: 'rui/tree/templates/node.html',
       replace: true,
       ruiTemplate: true,
+      priority: 10,
       compile: function($element, $attrs) {
         $attrs.$set('ruiTreeNodeRoot', $attrs.ruiTreeNode);
         return function() {};
@@ -3306,6 +3666,111 @@
 
 }).call(this);
 
+(function() {
+  angular.module('rui.tree.directives.search', ['rui.tree.controllers.search']).directive('ruiTreeSearch', function($parse) {
+    return {
+      require: ['ruiTreeSearch', 'ruiTreeCtrl'],
+      controller: 'RuiTreeSearchCtrl',
+      compile: function($element) {
+        $element.addClass('rui-tree-searchable');
+        $element.find('.rui-tree-nodes').attr('rui-tree-node-searchable', '').attr('ng-show', '$ruiTreeNode.showNode');
+        return {
+          pre: function($scope, $element, $attrs, _arg) {
+            var attribute, controller;
+            controller = _arg[0];
+            attribute = $attrs['ruiTreeSearch'];
+            if (attribute) {
+              return controller.setSearchAttribute(attribute);
+            }
+          }
+        };
+      }
+    };
+  }).directive('ruiTreeNodeSearchable', function() {
+    return {
+      require: ['ruiTreeNodeCtrl'],
+      controller: 'RuiTreeNodeSearchCtrl',
+      compile: function($element) {
+        var contentElement;
+        contentElement = $element.find('.rui-tree-node-content');
+        contentElement.attr('rui-tree-node-search-content', '');
+        return {
+          pre: function($scope, $element, $attrs, _arg) {
+            var nodeController;
+            nodeController = _arg[0];
+            nodeController.addSubTreeDirective('rui-tree-search', '');
+            return $scope.$watch('$ruiTreeNode.state.searchMatch', function(match) {
+              var fn;
+              fn = match ? $element.addClass : $element.removeClass;
+              return fn('searchMatch');
+            });
+          }
+        };
+      }
+    };
+  }).directive('ruiTreeNodeSearchContent', function() {
+    return {
+      scope: true,
+      compile: function($element) {
+        $element.find('.name').attr('ng-show', '!$ruiTreeNode.showSearchMatch');
+        $element.find('.name').after('<span class="name-with-match" ng-bind-html="$ruiTreeNode.state.searchMatchName" ng-show="$ruiTreeNode.showSearchMatch" />');
+        return function() {};
+      }
+    };
+  });
+
+}).call(this);
+
+(function() {
+  angular.module('rui.tree.directives.selection', ['rui.tree.controllers.selection']).directive('ruiTreeSelectable', function($parse) {
+    return {
+      require: ['ruiTreeSelectable', 'ruiTreeCtrl'],
+      controller: 'RuiTreeSelectionCtrl',
+      compile: function($element) {
+        $element.addClass('rui-tree-selectable');
+        $element.find('.rui-tree-nodes').attr('rui-tree-node-selectable', '');
+        return {
+          pre: function($scope, $element, $attrs, _arg) {
+            var allowDeselect, allowMulti, attribute, controller;
+            controller = _arg[0];
+            attribute = $attrs['ruiTreeSelectable'];
+            allowMulti = _.contains(attribute, 'multi');
+            allowDeselect = _.contains(attribute, 'deselect') || allowMulti;
+            controller.allowMultiSelect(allowMulti);
+            controller.allowDeselect(allowDeselect);
+            if (allowDeselect) {
+              $element.addClass('rui-tree-deselectable');
+            }
+            if ($attrs['ruiTreeSelectedNode']) {
+              controller.bindSelectedNode($attrs['ruiTreeSelectedNode']);
+            }
+            if ($attrs['ruiTreeSelectedNodes']) {
+              return controller.bindSelectedNodes($attrs['ruiTreeSelectedNodes']);
+            }
+          }
+        };
+      }
+    };
+  }).directive('ruiTreeNodeSelectable', function() {
+    return {
+      require: ['ruiTreeNodeCtrl'],
+      controller: 'RuiTreeNodeSelectionCtrl',
+      compile: function($element) {
+        $element.find('.rui-tree-node-content').attr('ng-click', '$ruiTreeNode.toggleSelection()');
+        $element.find('.rui-tree-node-content').attr('ng-class', '{selected: $ruiTreeNode.state.selected}');
+        return {
+          pre: function($scope, $element, $attrs, _arg) {
+            var nodeController;
+            nodeController = _arg[0];
+            return nodeController.addSubTreeDirective('rui-tree-selectable', '');
+          }
+        };
+      }
+    };
+  });
+
+}).call(this);
+
 /**
  * @ngdoc directive
  * @name rui.tree.directives:ruiTree
@@ -3321,6 +3786,8 @@
 									{name: 'A', children: [{name: 'A1', children:[{name: 'A1a'}]},{name: 'A2'}]},
 									{name: 'B'}
 								]
+								$scope.$on('rui-tree:selectedNode', function(event, selectedNode){ console.log('selected node', selectedNode)});
+								$scope.$on('rui-tree:searchInProgress', function(event, inProgress){ console.log('search in progress', inProgress)});
 							}
 						);
 				</file>
@@ -3328,30 +3795,11 @@
 						<div ng-controller="Ctrl">
 
 							<h3>Default</h3>
-							<ul rui-tree="nodes" />
-							
-							<h3>With Custom Node Template</h3>
-							<ul rui-tree="nodes" rui-templates>
-								<div rui-template name="rui-tree-node">
-									<li class="my-custom-node-type">
-										<div>name: {{$ruiTreeNode.node.name}} 
-											level: {{$ruiTree.level}} 
-											parent: {{$ruiTree.root.name || 'none'}} 
-											# of children: {{$ruiTreeNode.node.children.length}} 
-											scope id: {{$id}}</div>
-										<div class="rui-tree-node-sub-tree-placeholder"/>
-									</li>
-								</div>
-								
-							</ul>
-							
-							<h3>With Custom Content Template</h3>
-							<ul rui-tree="nodes" rui-templates>
-								<div rui-template name="rui-tree-node-content">
-									<div class="custom-content">Node Name: 
-										{{$ruiTreeNode.node.name}}</div>
-								</div>
-							</ul>
+							<ul rui-tree="nodes track by name"/>
+
+							<h3>Example With Mixins</h3>
+							<input ng-model="searchTerm" />
+							<ul rui-tree="nodes track by name" rui-tree-expandable="" rui-tree-selectable="deselect" rui-tree-search="searchTerm search by name" class="rui-tree-outline" />
 
 						</div>
 				</file>
@@ -3360,21 +3808,24 @@
 
 
 (function() {
-  angular.module('rui.tree.directives.tree', ['rui.templates', 'rui.util.template', 'rui.tree.controllers.tree']).directive('ruiTreeCtrl', function() {
+  angular.module('rui.tree.directives.tree', ['rui.templates', 'rui.util.template', 'rui.tree.controllers.tree', 'rui.util.trackBy']).directive('ruiTreeCtrl', function($ruiTrackBy) {
     return {
       restrict: 'EA',
       require: ['ruiTreeCtrl'],
       scope: true,
       controller: 'RuiTreeCtrl',
+      priority: 10,
       link: function($scope, $element, $attrs, _arg) {
-        var controller, _ref;
+        var controller, rootExpression, trackBy, _ref, _ref1;
         controller = _arg[0];
         $scope.$ruiTree.deepWatch = $attrs['ruiTreeDeepWatch'] ? $scope.$eval($attrs['ruiTreeDeepWatch']) : false;
         $scope.$ruiTree.level = 0;
         if (((_ref = $scope.$parent) != null ? _ref.$ruiTree : void 0) != null) {
           $scope.$ruiTree.level = $scope.$parent.$ruiTree.level + 1;
         }
-        return $scope.$watch($attrs.ruiTreeRoot, controller.updateRoot, false);
+        _ref1 = $ruiTrackBy.parse($attrs.ruiTreeRoot), rootExpression = _ref1[0], trackBy = _ref1[1];
+        controller.setTrackBy(trackBy);
+        return $scope.$watch(rootExpression, controller.updateRoot, false);
       }
     };
   }).directive('ruiTree', function() {
@@ -3385,6 +3836,8 @@
       replace: true,
       transclude: true,
       ruiTemplate: true,
+      priority: 10,
+      scope: true,
       compile: function($element, $attrs) {
         $attrs.$set('ruiTreeRoot', $attrs.ruiTree);
         return function() {};
@@ -3395,7 +3848,114 @@
 }).call(this);
 
 (function() {
-  angular.module('rui.tree.factories', ['rui.tree.factories.timeoutThrottle']);
+  angular.module('rui.tree.factories', ['rui.tree.factories.timeoutThrottle', 'rui.tree.factories.search']);
+
+}).call(this);
+
+(function() {
+  var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+
+  angular.module('rui.tree.factories.search', ['rui.util.filters.regExpEscape', 'rui.util.lodash', 'ngSanitize']).factory('ruiTreeSearchFactory', function($injector) {
+    var RuiTreeSearch, factory;
+    RuiTreeSearch = (function() {
+      function RuiTreeSearch($timeout, $log, $filter, $rootScope, $q, ruiTreeSearchCtrl, term, nodeExpression) {
+        this.$timeout = $timeout;
+        this.$log = $log;
+        this.$rootScope = $rootScope;
+        this.$q = $q;
+        this.ruiTreeSearchCtrl = ruiTreeSearchCtrl;
+        this.term = term;
+        this.nodeExpression = nodeExpression;
+        this.searchExp = __bind(this.searchExp, this);
+        this.escapeSearchTerm = __bind(this.escapeSearchTerm, this);
+        this.cancel = __bind(this.cancel, this);
+        this._searchChildren = __bind(this._searchChildren, this);
+        this._search = __bind(this._search, this);
+        this.search = __bind(this.search, this);
+        this.$regExpEscape = $filter('regExpEscape');
+        this.expression = this.searchExp(this.term);
+      }
+
+      RuiTreeSearch.prototype.search = function(root, delay) {
+        var run,
+          _this = this;
+        run = function() {
+          return _this._search(root);
+        };
+        if (delay) {
+          return this.$timeout(run, delay, false);
+        } else {
+          return run(root);
+        }
+      };
+
+      RuiTreeSearch.prototype._search = function(root) {
+        var expression, name, state;
+        if (this.cancelled) {
+          return this.$q.when();
+        }
+        if (this.nodeExpression(root)) {
+          expression = this.expression;
+          name = this.nodeExpression(root);
+          state = this.ruiTreeSearchCtrl.getNodeState(root);
+          state.searchMatch = expression.test(name);
+          state.searchMatchName = state.searchMatch ? name.replace(expression, "<span class='search-match'>$&</span>") : null;
+        }
+        return this.$q.when(this._searchChildren(root));
+      };
+
+      RuiTreeSearch.prototype._searchChildren = function(root) {
+        var children,
+          _this = this;
+        children = root.children || [];
+        return this.$timeout(function() {
+          var childSearches;
+          if (_this.cancelled) {
+            return _this.$q.when();
+          }
+          childSearches = _.map(children, function(child) {
+            return _this._search(child);
+          });
+          return _this.$q.all(childSearches).then(function(childStates) {
+            var state;
+            if (_this.cancelled) {
+              return _this.$q.when();
+            }
+            state = _this.ruiTreeSearchCtrl.getNodeState(root) || {};
+            state.inSearchMatchPath = state.searchMatch || _.any(childStates, 'inSearchMatchPath');
+            return _this.$q.when(state);
+          });
+        }, 0, false);
+      };
+
+      RuiTreeSearch.prototype.cancel = function() {
+        return this.cancelled = true;
+      };
+
+      RuiTreeSearch.prototype.escapeSearchTerm = function(term) {
+        return this.$regExpEscape(term);
+      };
+
+      RuiTreeSearch.prototype.searchExp = function(term) {
+        var escaped;
+        escaped = this.escapeSearchTerm(term);
+        return new RegExp(escaped, 'gi');
+      };
+
+      return RuiTreeSearch;
+
+    })();
+    factory = function(term, nodeExpression, ruiTreeSearchCtrl) {
+      var instance, locals;
+      locals = {
+        term: term,
+        nodeExpression: nodeExpression,
+        ruiTreeSearchCtrl: ruiTreeSearchCtrl
+      };
+      return instance = $injector.instantiate(RuiTreeSearch, locals);
+    };
+    return factory;
+  });
 
 }).call(this);
 
@@ -3468,6 +4028,19 @@
 }).call(this);
 
 (function() {
+  angular.module('rui.util.element.directives.blur', []).directive('ruiBlur', function() {
+    return function($scope, $element, $attrs) {
+      return $scope.$watch($attrs['ruiBlur'], function(newValue) {
+        if (newValue) {
+          return $($element).blur();
+        }
+      });
+    };
+  });
+
+}).call(this);
+
+(function() {
   angular.module('rui.util.element.directives.focusMe', []).directive('ruiFocusMe', function($timeout, $parse) {
     return {
       link: function($scope, $element, $attrs) {
@@ -3487,7 +4060,7 @@
 }).call(this);
 
 (function() {
-  angular.module('rui.util.element.directives', ['rui.util.element.directives.focusMe']);
+  angular.module('rui.util.element.directives', ['rui.util.element.directives.focusMe', 'rui.util.element.directives.blur']);
 
 }).call(this);
 
@@ -3509,6 +4082,29 @@
       return escaped;
     };
   });
+
+}).call(this);
+
+(function() {
+  var RuiGuid,
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+
+  angular.module('rui.util.guid', []).service('$ruiGuid', RuiGuid = (function() {
+    function RuiGuid() {
+      this.generate = __bind(this.generate, this);
+    }
+
+    RuiGuid.prototype.s4 = function() {
+      return Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
+    };
+
+    RuiGuid.prototype.generate = function() {
+      return this.s4() + this.s4() + '-' + this.s4() + '-' + this.s4() + '-' + this.s4() + '-' + this.s4() + this.s4() + this.s4();
+    };
+
+    return RuiGuid;
+
+  })());
 
 }).call(this);
 
@@ -4036,6 +4632,33 @@ this controller to merge the template on to their element.
 }).call(this);
 
 (function() {
+  var RuiTrackBy;
+
+  angular.module('rui.util.trackBy', ['rui.util.guid']).service('$ruiTrackBy', RuiTrackBy = (function() {
+    function RuiTrackBy($ruiGuid, $parse) {
+      this.$ruiGuid = $ruiGuid;
+      this.$parse = $parse;
+    }
+
+    RuiTrackBy.prototype.parse = function(expression) {
+      var split, trackBy, valueExpression;
+      split = expression.split(' track by ');
+      valueExpression = this.$parse(split[0]);
+      if (split.length === 2) {
+        trackBy = this.$parse(split[1]);
+      } else {
+        trackBy = this.$ruiGuid.generate;
+      }
+      return [valueExpression, trackBy];
+    };
+
+    return RuiTrackBy;
+
+  })());
+
+}).call(this);
+
+(function() {
   var TranscludeCtrl,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
@@ -4268,6 +4891,6 @@ this controller to merge the template on to their element.
 (function() {
   var util;
 
-  util = angular.module('rui.util', ['rui.util.transclude', 'rui.util.template', 'rui.util.lodash', 'rui.util.cache', 'rui.util.http', 'rui.util.bootstrap', 'rui.util.element', 'rui.util.timeout']);
+  util = angular.module('rui.util', ['rui.util.transclude', 'rui.util.template', 'rui.util.lodash', 'rui.util.cache', 'rui.util.http', 'rui.util.bootstrap', 'rui.util.element', 'rui.util.timeout', 'rui.util.guid', 'rui.util.trackBy']);
 
 }).call(this);
