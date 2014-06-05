@@ -474,13 +474,15 @@
           var _this = this;
           return async.eachSeries(projectNodes, function (project, projectCompleteCallback) {
             return projectIterator(parent, project, function (err) {
-              if (err != null) {
-                return projectCompleteCallback(err);
-              } else if (project != null ? project.children : void 0) {
-                return _this._eachProjectInTree(project, project.children, projectIterator, projectCompleteCallback);
-              } else {
-                return projectCompleteCallback();
-              }
+              return async.nextTick(function () {
+                if (err != null) {
+                  return projectCompleteCallback(err);
+                } else if (project != null ? project.children : void 0) {
+                  return _this._eachProjectInTree(project, project.children, projectIterator, projectCompleteCallback);
+                } else {
+                  return projectCompleteCallback();
+                }
+              });
             });
           }, callback);
         };
