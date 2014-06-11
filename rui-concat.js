@@ -410,7 +410,11 @@
       RuiAlmProjectPickerTreeBuilder.prototype._fetchProjectsForWorkspace = function(workspace) {
         var _this = this;
         return this._findAProjectOidInAWorkspace(workspace).then(function(projectOidInWorkspace) {
-          return _this._fetchProjectsForWorkspaceUsingOidAndSetCurrentOid(projectOidInWorkspace);
+          if (projectOidInWorkspace) {
+            return _this._fetchProjectsForWorkspaceUsingOidAndSetCurrentOid(projectOidInWorkspace);
+          } else {
+            return _this.$q.when([]);
+          }
         });
       };
 
@@ -443,7 +447,8 @@
         var params,
           _this = this;
         if ((workspace != null ? workspace._ref : void 0) == null) {
-          return this.$q.reject('Workspace with _ref is required');
+          this.$log.debug("Workspace with _ref is required; " + workspace);
+          return this.$q.when(null);
         }
         params = {
           start: 1,
@@ -459,8 +464,8 @@
           data = _arg.data;
           if (data.QueryResult.Results.length !== 1) {
             message = 'Unexpected results retrieving a project from workspace';
-            _this.$log.error(message, workspace, data);
-            return _this.$q.reject(message);
+            _this.$log.debug(message, workspace, data);
+            return null;
           } else {
             projectOidInWorkspace = data.QueryResult.Results[0].ObjectID;
             return projectOidInWorkspace;
