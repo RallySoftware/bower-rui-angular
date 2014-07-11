@@ -672,6 +672,207 @@
   });
 }.call(this));
 (function () {
+  angular.module('rui.analytics.beacon.aggregator', []).factory('RallyMetrics', [
+    '$window',
+    function ($window) {
+      return $window.RallyMetrics;
+    }
+  ]).provider('rallyBeacon', function () {
+    var handler, _this = this;
+    this.appId = null;
+    this.beaconUrl = null;
+    handler = {
+      getComponentHierarchy: function () {
+        return [_this.appId];
+      },
+      getComponentType: function () {
+        return _this.appId;
+      },
+      getAppName: function () {
+        return _this.appId;
+      }
+    };
+    this.$get = [
+      'RallyMetrics',
+      function (RallyMetrics) {
+        var aggregator;
+        aggregator = new RallyMetrics.Aggregator({
+          flushInterval: 5000,
+          beaconUrl: _this.beaconUrl,
+          handlers: [handler]
+        });
+        aggregator.superTraits = {};
+        return aggregator;
+      }
+    ];
+    return this;
+  });
+}.call(this));
+(function () {
+  angular.module('rui.analytics.beacon.angulartics', [
+    'angulartics',
+    'rui.analytics.beacon.aggregator'
+  ]).config([
+    '$analyticsProvider',
+    function ($analyticsProvider) {
+      return angulartics.waitForVendorApi('rallyBeacon', 500, function (rallyBeacon) {
+        $analyticsProvider.registerSetUsername(function (userId) {
+          return _.defaults(rallyBeacon.superTraits, { userId: userId });
+        });
+        $analyticsProvider.registerSetSuperPropertiesOnce(function (properties) {
+          return _.defaults(rallyBeacon.superTraits, properties);
+        });
+        $analyticsProvider.registerSetSuperProperties(function (properties) {
+          return _.extend(rallyBeacon.superTraits, properties);
+        });
+        $analyticsProvider.registerSetUserPropertiesOnce(function (properties) {
+          return _.defaults(rallyBeacon.superTraits, properties);
+        });
+        $analyticsProvider.registerSetUserProperties(function (properties) {
+          return _.extend(rallyBeacon.superTraits, properties);
+        });
+        $analyticsProvider.registerPageTrack(function (path) {
+        });
+        return $analyticsProvider.registerEventTrack(function (event, properties) {
+          var _base, _base1;
+          if (typeof zone !== 'undefined' && zone !== null) {
+            if (zone.data == null) {
+              zone.data = {};
+            }
+            if ((_base = zone.data).analytics == null) {
+              _base.analytics = {};
+            }
+            if ((_base1 = zone.data.analytics).events == null) {
+              _base1.events = [];
+            }
+            zone.data.analytics.events.push({
+              event: event,
+              properties: properties
+            });
+          }
+          return rallyBeacon.recordAction({
+            component: this,
+            description: event,
+            miscData: _.extend({}, rallyBeacon.superTraits, properties)
+          });
+        });
+      });
+    }
+  ]).run([
+    '$window',
+    'rallyBeacon',
+    function ($window, rallyBeacon) {
+      return $window.rallyBeacon = rallyBeacon;
+    }
+  ]);
+}.call(this));
+(function () {
+  angular.module('rui.analytics.beacon.http', ['rui.analytics.beacon.aggregator']).config([
+    '$provide',
+    function ($provide) {
+      return $provide.decorator('$httpBackend', function ($delegate, rallyBeacon) {
+        var getRallyRequestId, wrapped;
+        getRallyRequestId = function (responseHeaderString) {
+          var match;
+          match = responseHeaderString.match(/rallyrequestid: (.+)/);
+          return match && match[1];
+        };
+        wrapped = function (method, url, reqData, done, reqHeaders, timeout, withCredentials) {
+          var metricsData, requester, wrappedDone;
+          requester = this;
+          metricsData = rallyBeacon.beginDataRequest(this, url, rallyBeacon.superTraits);
+          if (metricsData) {
+            reqHeaders = _.extend(reqHeaders || {}, metricsData.xhrHeaders);
+          }
+          wrappedDone = function (status, response, responseHeaderString, statusText) {
+            var rallyRequestId;
+            if (metricsData) {
+              rallyRequestId = getRallyRequestId(responseHeaderString);
+              rallyBeacon.endDataRequest(requester, rallyRequestId, metricsData.requestId);
+            }
+            return done.apply(this, arguments);
+          };
+          return $delegate(method, url, reqData, wrappedDone, reqHeaders, timeout, withCredentials);
+        };
+        _.assign(wrapped, $delegate);
+        return wrapped;
+      });
+    }
+  ]);
+}.call(this));
+(function () {
+  angular.module('rui.analytics.beacon', [
+    'rui.analytics.beacon.angulartics',
+    'rui.analytics.beacon.http',
+    'rui.analytics.beacon.aggregator',
+    'rui.analytics.beacon.zone'
+  ]);
+}.call(this));
+(function () {
+  var __slice = [].slice;
+  if (typeof Object.getPrototypeOf !== 'function') {
+    if (typeof 'test'.__proto__ === 'object') {
+      Object.getPrototypeOf = function (object) {
+        return object.__proto__;
+      };
+    } else {
+      Object.getPrototypeOf = function (object) {
+        return object.constructor.prototype;
+      };
+    }
+  }
+  angular.module('rui.analytics.beacon.zone', ['rui.analytics.beacon.aggregator']).run([
+    '$rootScope',
+    '$window',
+    '$log',
+    'rallyBeacon',
+    function ($rootScope, $window, $log, rallyBeacon) {
+      var dataZone, forkAndRun, prototype;
+      dataZone = function (description) {
+        return {
+          beforeTask: function () {
+            var _base;
+            if (this.data == null) {
+              this.data = {};
+            }
+            if ((_base = this.data).analytics == null) {
+              _base.analytics = {};
+            }
+            return rallyBeacon.beginLoad({
+              component: zone,
+              description: description
+            });
+          },
+          afterTask: function () {
+            return rallyBeacon.endLoad({ component: zone });
+          }
+        };
+      };
+      forkAndRun = function (description) {
+        return function () {
+          var args, fn, run, self;
+          fn = arguments[0], args = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
+          self = this;
+          run = function () {
+            return fn.call.apply(fn, [self].concat(__slice.call(args)));
+          };
+          if (typeof zone !== 'undefined' && zone !== null) {
+            return zone.fork(dataZone(description)).run(run);
+          } else {
+            return run();
+          }
+        };
+      };
+      prototype = Object.getPrototypeOf($rootScope);
+      prototype.$apply = _.wrap(prototype.$apply, forkAndRun('$apply'));
+      return prototype.$digest = _.wrap(prototype.$digest, forkAndRun('$digest'));
+    }
+  ]);
+}.call(this));
+(function () {
+  angular.module('rui.analytics', ['rui.analytics.beacon']);
+}.call(this));
+(function () {
   var cardboard;
   cardboard = angular.module('rui.cardboard', [
     'rui.templates',
