@@ -57,7 +57,7 @@ angular.module('rui.templates').run(['$templateCache', function($templateCache) 
 
 
   $templateCache.put('rui/tabs/templates/tab-heading.html',
-    "<li ng-class=$tab.headingClasses()><a rui-transclude=\"\" ng-click=$tab.select()></a></li>"
+    "<li ng-class=$tab.headingClasses()><a rui-transclude=\"\" ng-click=$tab.select() analytics-if=$tabset.config.$analytics.name analytics-on=\"click mouseover\" analytics-event=tab analytics-component=rui.tabset analytics-properties=$tabset.config.$analytics analytics-tabset={{$tabset.config.$analytics.name}} analytics-tab={{$tab.model}}></a></li>"
   );
 
 

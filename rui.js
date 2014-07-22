@@ -2678,37 +2678,49 @@
   ]);
 }.call(this));
 (function () {
-  var TabsetCtrl, __bind = function (fn, me) {
+  var TabCtrl, __bind = function (fn, me) {
       return function () {
         return fn.apply(me, arguments);
       };
     };
-  angular.module('rui.tabs.directives.controllers.tab', []).controller('TabCtrl', TabsetCtrl = function () {
-    TabsetCtrl.$inject = ['$scope'];
-    function TabsetCtrl($scope) {
-      var _this = this;
+  angular.module('rui.tabs.directives.controllers.tab', []).controller('TabCtrl', TabCtrl = function () {
+    function TabCtrl($scope) {
       this.$scope = $scope;
+      this.watchActiveTab = __bind(this.watchActiveTab, this);
       this.headingClasses = __bind(this.headingClasses, this);
       this.select = __bind(this.select, this);
       this.$tab = this.$scope.$tab = this.$scope.$new();
+      this.$tab.state = {};
       this.$tab.model = {};
       this.$tab.select = this.select;
       this.$tab.headingClasses = this.headingClasses;
       this.$tab.contentClasses = this.headingClasses;
       this.$tabset = this.$scope.$tabset;
-      this.$tabset.registerTab(this.$tab.model);
-      this.$tabset.$watch('state.activeTab', function (tab) {
-        return _this.$tab.model.isActive = tab === _this.$tab.model;
-      });
+      this.$tabset.registerTab(this.$tab);
+      this.$tabset.$watch('$tabset.state.activeTab', this.watchActiveTab);
       return this;
     }
-    TabsetCtrl.prototype.select = function () {
-      return this.$tab.model.isActive = this.$tab.selectTab(this.$tab.model);
+    TabCtrl.prototype.select = function () {
+      var isActive;
+      isActive = this.$tab.state.isActive;
+      if (isActive && !this.$tabset.config.allowDeselect) {
+        return;
+      }
+      return this.$tab.selectTab(isActive ? null : this.$tab);
     };
-    TabsetCtrl.prototype.headingClasses = function () {
-      return { active: this.$tab.model.isActive };
+    TabCtrl.prototype.headingClasses = function () {
+      return {
+        active: this.$tab.state.isActive,
+        selected: this.$tab.state.isSelected
+      };
     };
-    return TabsetCtrl;
+    TabCtrl.prototype.watchActiveTab = function (tab, oldTab) {
+      this.$tab.state.isActive = tab === this.$tab;
+      if (tab != null) {
+        return this.$tab.state.isSelected = this.$tab.state.isActive;
+      }
+    };
+    return TabCtrl;
   }());
 }.call(this));
 (function () {
@@ -2718,26 +2730,25 @@
       };
     };
   angular.module('rui.tabs.directives.controllers.tabset', []).controller('TabsetCtrl', TabsetCtrl = function () {
-    TabsetCtrl.$inject = [
-      '$scope',
-      '$transclude'
-    ];
-    function TabsetCtrl($scope, $transclude) {
+    function TabsetCtrl($scope) {
       this.$scope = $scope;
-      this.$transclude = $transclude;
       this.registerTab = __bind(this.registerTab, this);
       this.select = __bind(this.select, this);
       this.$tabset = this.$scope.$tabset = this.$scope.$new();
+      this.$tabset.config = {
+        allowDeselect: false,
+        startActive: true
+      };
       this.$tabset.state = {};
       this.$tabset.registerTab = this.registerTab;
       return this;
     }
     TabsetCtrl.prototype.select = function (tab) {
       this.$tabset.state.activeTab = tab;
-      return true;
+      return tab != null;
     };
     TabsetCtrl.prototype.registerTab = function (tab) {
-      if (!this.$tabset.state.activeTab) {
+      if (!this.$tabset.state.activeTab && this.$tabset.config.startActive) {
         return this.select(tab);
       }
     };
@@ -2748,19 +2759,21 @@
 */
 (function () {
   var tab;
-  tab = angular.module('rui.tabs.directives.tab', ['rui.tabs.directives.controllers.tab']).directive('ruiTab', [function () {
+  tab = angular.module('rui.tabs.directives.tab', ['rui.tabs.directives.controllers.tab']).directive('ruiTab', [
+    '$parse',
+    function ($parse) {
       return {
         restrict: 'EA',
-        require: [
-          '?ngModel',
-          '^ruiTabset'
-        ],
+        require: ['^ruiTabset'],
         controller: 'TabCtrl',
         scope: true,
         link: {
           post: function (scope, element, attrs, _arg) {
-            var $content, $element, $heading, $tabset, ngModel, tabsetController;
-            ngModel = _arg[0], tabsetController = _arg[1];
+            var $content, $element, $heading, $tabset, model, tabsetController;
+            tabsetController = _arg[0];
+            if (model = $parse(attrs.ruiTab)(scope)) {
+              scope.$tab.model = model;
+            }
             $element = $(element);
             $heading = $element.children('.rui-tab-heading, [rui-tab-heading]');
             $content = $element.children('.rui-tab-content, [rui-tab-content]');
@@ -2772,7 +2785,8 @@
           }
         }
       };
-    }]);
+    }
+  ]);
 }.call(this));
 /*
 */
@@ -2852,7 +2866,7 @@
               </div>
               <div rui-tabset ng-model="selectedTab">
                 <!-- directive: rui-transclude-class rui-tab -->
-                <div ng-repeat="tab in tabs" rui-tab ng-model="tab">
+                <div ng-repeat="tab in tabs" rui-tab>
                   <div rui-tab-heading>{{tab.name}}</div>
                   <div rui-tab-content ng-class="{active: tab.active}">{{tab.name}} - content</div>
               	</div>
@@ -2863,10 +2877,18 @@
 */
 (function () {
   var tabset;
-  tabset = angular.module('rui.tabs.directives.tabset', ['rui.tabs.directives.controllers.tabset']).directive('ruiTabset', [function () {
+  tabset = angular.module('rui.tabs.directives.tabset', [
+    'rui.tabs.directives.controllers.tabset',
+    'rui.util.lodash'
+  ]).directive('ruiTabset', [
+    '$parse',
+    function ($parse) {
       return {
         restrict: 'EA',
-        require: ['?ngModel'],
+        require: [
+          '?ngModel',
+          'ruiTabset'
+        ],
         transclude: true,
         scope: true,
         replace: true,
@@ -2874,13 +2896,20 @@
         controller: 'TabsetCtrl',
         link: {
           post: function (scope, element, attrs, _arg) {
-            var ngModel;
-            ngModel = _arg[0];
+            var ngModel, ruiTabsetCtrl;
+            ngModel = _arg[0], ruiTabsetCtrl = _arg[1];
+            _.extend(scope.$tabset.config, $parse(attrs.ruiTabset)(scope));
+            if (ngModel) {
+              scope.$watch('$tabset.state.activeTab', function (tab) {
+                return ngModel.$setViewValue(tab != null ? tab.model : void 0);
+              });
+            }
             return this;
           }
         }
       };
-    }]);
+    }
+  ]);
 }.call(this));
 (function () {
   var module;
@@ -4002,7 +4031,74 @@
   });
 }.call(this));
 (function () {
-  angular.module('rui.util.bootstrap', []);
+  angular.module('rui.util.bootstrap.collapseWidth', ['ui.bootstrap']).directive('collapseWidth', [
+    '$transition',
+    function ($transition, $timeout) {
+      return {
+        link: function (scope, element, attrs) {
+          var collapse, collapseDone, currentTransition, doTransition, expand, expandDone, initialAnimSkip;
+          initialAnimSkip = true;
+          currentTransition = void 0;
+          doTransition = function (change) {
+            var newTransition, newTransitionDone;
+            newTransitionDone = function () {
+              if (currentTransition === newTransition) {
+                currentTransition = undefined;
+              }
+            };
+            newTransition = $transition(element, change);
+            if (currentTransition) {
+              currentTransition.cancel();
+            }
+            currentTransition = newTransition;
+            newTransition.then(newTransitionDone, newTransitionDone);
+            return newTransition;
+          };
+          expand = function () {
+            if (initialAnimSkip) {
+              initialAnimSkip = false;
+              expandDone();
+            } else {
+              element.removeClass('collapse').addClass('collapsing-width');
+              doTransition({ width: element[0].scrollWidth + 'px' }).then(expandDone);
+            }
+          };
+          expandDone = function () {
+            element.removeClass('collapsing-width');
+            element.addClass('collapse in');
+            element.css({ width: 'auto' });
+          };
+          collapse = function () {
+            var x;
+            if (initialAnimSkip) {
+              initialAnimSkip = false;
+              collapseDone();
+              element.css({ width: 0 });
+            } else {
+              element.css({ width: element[0].scrollWidth + 'px' });
+              x = element[0].offsetHeight;
+              element.removeClass('collapse in').addClass('collapsing-width');
+              doTransition({ width: 0 }).then(collapseDone);
+            }
+          };
+          collapseDone = function () {
+            element.removeClass('collapsing-width');
+            element.addClass('collapse');
+          };
+          scope.$watch(attrs.collapseWidth, function (shouldCollapse) {
+            if (shouldCollapse) {
+              collapse();
+            } else {
+              expand();
+            }
+          });
+        }
+      };
+    }
+  ]);
+}.call(this));
+(function () {
+  angular.module('rui.util.bootstrap', ['rui.util.bootstrap.collapseWidth']);
 }.call(this));
 /**
  * @ngdoc service
@@ -4930,7 +5026,7 @@ angular.module('rui.templates').run(['$templateCache', function($templateCache) 
 
 
   $templateCache.put('rui/tabs/templates/tab-heading.html',
-    "<li ng-class=$tab.headingClasses()><a rui-transclude=\"\" ng-click=$tab.select()></a></li>"
+    "<li ng-class=$tab.headingClasses()><a rui-transclude=\"\" ng-click=$tab.select() analytics-if=$tabset.config.$analytics.name analytics-on=\"click mouseover\" analytics-event=tab analytics-component=rui.tabset analytics-properties=$tabset.config.$analytics analytics-tabset={{$tabset.config.$analytics.name}} analytics-tab={{$tab.model}}></a></li>"
   );
 
 
