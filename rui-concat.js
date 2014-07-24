@@ -48,8 +48,10 @@
       return this.$scope.$ruiAlmProjectPicker.selectedNode = node;
     };
 
-    RuiAlmProjectPickerCtrl.prototype.onSelectedNode = function(event, selectedNode) {
-      this.$scope.$ruiAlmProjectPicker.dropdownIsOpen = false;
+    RuiAlmProjectPickerCtrl.prototype.onSelectedNode = function(event, selectedNode, userEvent) {
+      if (userEvent != null) {
+        this.$scope.$ruiAlmProjectPicker.dropdownIsOpen = false;
+      }
       return event.stopPropagation();
     };
 
@@ -2834,7 +2836,7 @@
       return this;
     }
 
-    TabCtrl.prototype.select = function() {
+    TabCtrl.prototype.select = function($event) {
       var isActive;
       isActive = this.$tab.state.isActive;
       if (isActive && !this.$tabset.config.allowDeselect) {
@@ -2871,6 +2873,7 @@
     function TabsetCtrl($scope) {
       this.$scope = $scope;
       this.registerTab = __bind(this.registerTab, this);
+      this.selectModel = __bind(this.selectModel, this);
       this.select = __bind(this.select, this);
       this.$tabset = this.$scope.$tabset = this.$scope.$new();
       this.$tabset.config = {
@@ -2879,6 +2882,7 @@
       };
       this.$tabset.state = {};
       this.$tabset.registerTab = this.registerTab;
+      this.$tabset.tabs = [];
       return this;
     }
 
@@ -2887,10 +2891,18 @@
       return tab != null;
     };
 
+    TabsetCtrl.prototype.selectModel = function(model) {
+      return this.select(_.find(this.$tabset.tabs, {
+        model: model
+      }));
+    };
+
     TabsetCtrl.prototype.registerTab = function(tab) {
       if (!this.$tabset.state.activeTab && this.$tabset.config.startActive) {
-        return this.select(tab);
+        this.select(tab);
       }
+      tab.state.isSelected = this.$tabset.tabs.length === 0;
+      return this.$tabset.tabs.push(tab);
     };
 
     return TabsetCtrl;
@@ -3054,6 +3066,11 @@
           if (ngModel) {
             scope.$watch('$tabset.state.activeTab', function(tab) {
               return ngModel.$setViewValue(tab != null ? tab.model : void 0);
+            });
+            scope.$watch(function() {
+              return ngModel.$modelValue;
+            }, function(tab) {
+              return ruiTabsetCtrl.selectModel(tab);
             });
           }
           return this;
@@ -3551,14 +3568,15 @@
     __slice = [].slice;
 
   angular.module('rui.tree.controllers.selection', ['rui.util.lodash']).controller('RuiTreeSelectionCtrl', RuiTreeSelectionCtrl = (function() {
-    function RuiTreeSelectionCtrl($scope, $parse) {
+    function RuiTreeSelectionCtrl($scope, $parse, $timeout) {
       var _base,
         _this = this;
       this.$scope = $scope;
       this.$parse = $parse;
-      this.watchSelectedNodes = __bind(this.watchSelectedNodes, this);
+      this.$timeout = $timeout;
       this.bubbleSelectPath = __bind(this.bubbleSelectPath, this);
       this.getParent = __bind(this.getParent, this);
+      this._selectNodes = __bind(this._selectNodes, this);
       this.toggleNodeSelection = __bind(this.toggleNodeSelection, this);
       this.getIndexedNode = __bind(this.getIndexedNode, this);
       this.selectNode = __bind(this.selectNode, this);
@@ -3581,12 +3599,17 @@
         selectNode: this.selectNode
       });
       if (this.$scope.$ruiTree.isRootTree) {
-        this.$scope.$watchCollection('$ruiTree.rootState.selection.nodes', this.watchSelectedNodes);
         this.$scope.$watch('$ruiTree.rootState.selection.node', function(node) {
-          return _this.$scope.$emit('rui-tree:selectedNode', node);
+          _this.$scope.$emit('rui-tree:selectedNode', node, _this.$scope.$ruiTree.rootState.selection.userEvent);
+          return _this.$timeout(function() {
+            return _this.$scope.$ruiTree.rootState.selection.userEvent = null;
+          });
         });
         this.$scope.$watchCollection('$ruiTree.rootState.selection.nodes', function(nodes) {
-          return _this.$scope.$emit('rui-tree:selectedNodes', nodes);
+          _this.$scope.$emit('rui-tree:selectedNodes', nodes, _this.$scope.$ruiTree.rootState.selection.userEvent);
+          return _this.$timeout(function() {
+            return _this.$scope.$ruiTree.rootState.selection.userEvent = null;
+          });
         });
         this.$scope.$on('rui-tree:index', this.updateNodesFromIndex);
       }
@@ -3683,9 +3706,12 @@
       return this.$scope.$ruiTree.getIndexedNode(node);
     };
 
-    RuiTreeSelectionCtrl.prototype.toggleNodeSelection = function(node) {
+    RuiTreeSelectionCtrl.prototype.toggleNodeSelection = function(node, userEvent) {
       var selection, state,
         _this = this;
+      if (userEvent == null) {
+        userEvent = null;
+      }
       selection = this.$scope.$ruiTree.rootState.selection;
       state = this.getNodeState(node);
       if (state.selected && !selection.allowDeselect) {
@@ -3695,9 +3721,9 @@
       node = this.getIndexedNode(node) || node;
       if (selection.allowMultiSelect) {
         if (state.selected) {
-          selection.nodes = selection.nodes.concat([node]);
+          this._selectNodes(selection.nodes.concat([node]), userEvent);
         } else {
-          selection.nodes = _.without(selection.nodes, node);
+          this._selectNodes(_.without(selection.nodes, node), userEvent);
         }
         return this.bubbleSelectPath(node, state.selected);
       } else {
@@ -3706,12 +3732,20 @@
           return _this.bubbleSelectPath(currentlySelectedNode, false);
         });
         if (state.selected) {
-          selection.nodes = [node];
-          return this.bubbleSelectPath(node, true);
+          this.bubbleSelectPath(node, true);
+          return this._selectNodes([node], userEvent);
         } else {
-          return selection.nodes = [];
+          return this._selectNodes([], userEvent);
         }
       }
+    };
+
+    RuiTreeSelectionCtrl.prototype._selectNodes = function(nodes, userEvent) {
+      var selection;
+      selection = this.$scope.$ruiTree.rootState.selection;
+      selection.nodes = nodes;
+      selection.node = _.first(nodes);
+      return selection.userEvent = userEvent;
     };
 
     RuiTreeSelectionCtrl.prototype.getParent = function(node) {
@@ -3737,10 +3771,6 @@
       }
     };
 
-    RuiTreeSelectionCtrl.prototype.watchSelectedNodes = function(nodes) {
-      return this.$scope.$ruiTree.rootState.selection.node = _.first(nodes);
-    };
-
     return RuiTreeSelectionCtrl;
 
   })()).controller('RuiTreeNodeSelectionCtrl', RuiTreeNodeSelectionCtrl = (function() {
@@ -3753,8 +3783,11 @@
       });
     }
 
-    RuiTreeNodeSelectionCtrl.prototype.toggleSelection = function() {
-      return this.$scope.$ruiTree.toggleNodeSelection(this.$scope.$ruiTreeNode.node);
+    RuiTreeNodeSelectionCtrl.prototype.toggleSelection = function(userEvent) {
+      if (userEvent == null) {
+        userEvent = null;
+      }
+      return this.$scope.$ruiTree.toggleNodeSelection(this.$scope.$ruiTreeNode.node, userEvent);
     };
 
     RuiTreeNodeSelectionCtrl.prototype.getState = function() {
@@ -4008,7 +4041,7 @@
       require: ['ruiTreeNodeCtrl'],
       controller: 'RuiTreeNodeSelectionCtrl',
       compile: function($element) {
-        $element.find('.rui-tree-node-content').attr('ng-click', '$ruiTreeNode.toggleSelection()');
+        $element.find('.rui-tree-node-content').attr('ng-click', '$ruiTreeNode.toggleSelection($event)');
         $element.find('.rui-tree-node-content').attr('ng-class', '{selected: $ruiTreeNode.state.selected}');
         return {
           pre: function($scope, $element, $attrs, _arg) {
