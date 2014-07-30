@@ -2353,10 +2353,14 @@
           options.useHTML = true;
           ngTemplateUrl = options.ngTemplateUrl;
           options.formatter = function(tooltip) {
-            var $scope;
-            $scope = angular.element(tooltip.label.div).scope();
-            $scope.$chart = chart;
-            $scope.$tooltip = this;
+            var $scope, _ref;
+            $scope = (_ref = angular.element(tooltip.label.div)) != null ? _ref.scope() : void 0;
+            if ($scope != null) {
+              $scope.$chart = chart;
+            }
+            if ($scope != null) {
+              $scope.$tooltip = this;
+            }
             return "<div ng-include=\"'" + ngTemplateUrl + "'\">";
           };
         }
@@ -2374,37 +2378,41 @@
   angular.module('rui.highcharts.decorators.useHtml', ['rui.highcharts.factories.highcharts']).config(function($provide) {
     return $provide.decorator('Highcharts', function($delegate, $compile) {
       $delegate.Chart.prototype.getContainer = _.wrap($delegate.Chart.prototype.getContainer, function() {
-        var $scope, args, getContainerFn, result;
+        var $scope, args, getContainerFn, result, _ref;
         getContainerFn = arguments[0], args = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
         result = getContainerFn.apply(this, args);
-        $scope = angular.element(this.renderTo).scope().$new();
-        this.$scope = $scope;
-        $scope.$chart = this;
-        $compile(this.container)(this.$scope);
+        $scope = (_ref = angular.element(this.renderTo).scope()) != null ? _ref.$new() : void 0;
+        if ($scope != null) {
+          this.$scope = $scope;
+          $scope.$chart = this;
+          $compile(this.container)(this.$scope);
+        }
         return result;
       });
       $delegate.Renderer.prototype.html = _.wrap($delegate.Renderer.prototype.html, function() {
-        var $innerScope, $scope, args, htmlFn, htmlWrapper, _ref, _ref1;
+        var $innerScope, $scope, args, htmlFn, htmlWrapper, _ref, _ref1, _ref2;
         htmlFn = arguments[0], args = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
         htmlWrapper = htmlFn.apply(this, args);
-        $scope = angular.element(this.box).scope().$new();
-        $compile(htmlWrapper.element)($scope);
-        $(htmlWrapper.element).on("remove", function() {
-          return $scope.$destroy();
-        });
-        $innerScope = null;
-        if ((_ref = htmlWrapper.attrSetters) != null) {
-          _ref.text = _.wrap((_ref1 = htmlWrapper.attrSetters) != null ? _ref1.text : void 0, function() {
-            var args, result, textFn;
-            textFn = arguments[0], args = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
-            result = textFn.apply(this, args);
-            $innerScope = $scope.$new();
-            $compile($(this.element).contents())($innerScope);
-            if (!$innerScope.$$phase) {
-              $innerScope.$digest();
-            }
-            return result;
+        $scope = (_ref = angular.element(this.box).scope()) != null ? _ref.$new() : void 0;
+        if ($scope != null) {
+          $compile(htmlWrapper.element)($scope);
+          $(htmlWrapper.element).on("remove", function() {
+            return $scope.$destroy();
           });
+          $innerScope = null;
+          if ((_ref1 = htmlWrapper.attrSetters) != null) {
+            _ref1.text = _.wrap((_ref2 = htmlWrapper.attrSetters) != null ? _ref2.text : void 0, function() {
+              var args, result, textFn;
+              textFn = arguments[0], args = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
+              result = textFn.apply(this, args);
+              $innerScope = $scope.$new();
+              $compile($(this.element).contents())($innerScope);
+              if (!$innerScope.$$phase) {
+                $innerScope.$digest();
+              }
+              return result;
+            });
+          }
         }
         return htmlWrapper;
       });
