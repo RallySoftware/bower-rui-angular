@@ -4457,6 +4457,44 @@
 }).call(this);
 
 (function() {
+  var GraphService,
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+
+  angular.module('rui.util.graph', []).service('$graph', GraphService = (function() {
+    function GraphService() {
+      this.flattenDFS = __bind(this.flattenDFS, this);
+    }
+
+    /*
+    		@description Take a tree and return a flat array of children in DFS order
+    		@param {string} childArrayProperty The node property that contains an array of children
+    */
+
+
+    GraphService.prototype.flattenDFS = function(node, childArrayProperty) {
+      var children, subNode, _i, _len, _ref, _ref1;
+      if (childArrayProperty == null) {
+        childArrayProperty = 'children';
+      }
+      children = [];
+      if (((_ref = node[childArrayProperty]) != null ? _ref.length : void 0) > 0) {
+        _ref1 = node[childArrayProperty];
+        for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+          subNode = _ref1[_i];
+          children = children.concat(this.flattenDFS(subNode, childArrayProperty));
+        }
+      }
+      children.push(node);
+      return children;
+    };
+
+    return GraphService;
+
+  })());
+
+}).call(this);
+
+(function() {
   var RuiGuid,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
@@ -5262,6 +5300,6 @@ this controller to merge the template on to their element.
 (function() {
   var util;
 
-  util = angular.module('rui.util', ['rui.util.transclude', 'rui.util.template', 'rui.util.lodash', 'rui.util.cache', 'rui.util.http', 'rui.util.bootstrap', 'rui.util.element', 'rui.util.timeout', 'rui.util.guid', 'rui.util.trackBy']);
+  util = angular.module('rui.util', ['rui.util.transclude', 'rui.util.template', 'rui.util.lodash', 'rui.util.cache', 'rui.util.http', 'rui.util.bootstrap', 'rui.util.element', 'rui.util.timeout', 'rui.util.guid', 'rui.util.graph', 'rui.util.trackBy']);
 
 }).call(this);
