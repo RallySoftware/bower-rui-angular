@@ -1,12 +1,11 @@
 {
   "name": "rui-angular",
-  "version": "0.2.2",
+  "version": "0.2.4",
   "authors": [
     "Patrick Winters <pwinters@rallydev.com>",
     "Nicholas Boll <nicholas.boll@gmail.com>"
   ],
   "license": "MIT",
-  "private": true,
   "ignore": [
     "**/.*",
     "node_modules",
