@@ -1,6 +1,6 @@
 {
   "name": "rui-angular",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "authors": [
     "Patrick Winters <pwinters@rallydev.com>",
     "Nicholas Boll <nicholas.boll@gmail.com>"
@@ -22,7 +22,7 @@
     "jquery": "~1.10",
     "jquery-ui": "~1.11.0",
     "lodash": "~2.1",
-    "highcharts": "~3.0",
+    "highcharts": ">=3.0.0 <4.1.0",
     "async": "~0.7.0",
     "angular-ui-utils": "~0.1.1",
     "angulartics": "RallySoftware/angulartics#0.16.1",
