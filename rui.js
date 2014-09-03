@@ -2277,7 +2277,7 @@
           return result;
         });
         $delegate.Renderer.prototype.html = _.wrap($delegate.Renderer.prototype.html, function () {
-          var $innerScope, $scope, args, htmlFn, htmlWrapper, _ref, _ref1, _ref2;
+          var $innerScope, $scope, args, htmlFn, htmlWrapper, textWrapper, _ref, _ref1, _ref2;
           htmlFn = arguments[0], args = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
           htmlWrapper = htmlFn.apply(this, args);
           $scope = (_ref = angular.element(this.box).scope()) != null ? _ref.$new() : void 0;
@@ -2287,18 +2287,23 @@
               return $scope.$destroy();
             });
             $innerScope = null;
-            if ((_ref1 = htmlWrapper.attrSetters) != null) {
-              _ref1.text = _.wrap((_ref2 = htmlWrapper.attrSetters) != null ? _ref2.text : void 0, function () {
-                var args, result, textFn;
-                textFn = arguments[0], args = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
-                result = textFn.apply(this, args);
-                $innerScope = $scope.$new();
-                $compile($(this.element).contents())($innerScope);
-                if (!$innerScope.$$phase) {
-                  $innerScope.$digest();
-                }
-                return result;
-              });
+            textWrapper = function () {
+              var args, result, textFn;
+              textFn = arguments[0], args = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
+              result = textFn.apply(this, args);
+              $innerScope = $scope.$new();
+              $compile($(this.element).contents())($innerScope);
+              if (!$innerScope.$$phase) {
+                $innerScope.$digest();
+              }
+              return result;
+            };
+            if (htmlWrapper.attrSetters != null) {
+              if ((_ref1 = htmlWrapper.attrSetters) != null) {
+                _ref1.text = _.wrap((_ref2 = htmlWrapper.attrSetters) != null ? _ref2.text : void 0, textWrapper);
+              }
+            } else if (htmlWrapper.textSetter != null) {
+              htmlWrapper.textSetter = _.wrap(htmlWrapper.textSetter, textWrapper);
             }
           }
           return htmlWrapper;
