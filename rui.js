@@ -1599,6 +1599,251 @@
   ]);
 }.call(this));
 (function () {
+  angular.module('rui.flair.directives', ['rui.flair.directives.flair']);
+  angular.module('rui.flair.directives.flair', ['rui.util.lodash']).constant('ruiFlairDirectiveDefinition', {
+    transclude: true,
+    templateUrl: function ($element, $attrs) {
+      var _ref;
+      return (_ref = $attrs.templateUrl) != null ? _ref : 'rui/flair/templates/flair.html';
+    },
+    restrict: 'EA',
+    replace: true,
+    scope: true,
+    link: function ($scope, $element, $attrs) {
+      if ($attrs.onClose) {
+        if ($scope.onClose == null) {
+          $scope.onClose = function () {
+            return $scope.$eval($attrs.onClose);
+          };
+        }
+      }
+      return $scope.$dismiss != null ? $scope.$dismiss : $scope.$dismiss = function () {
+        $element.hide();
+        return typeof $scope.onClose === 'function' ? $scope.onClose() : void 0;
+      };
+    }
+  }).config([
+    '$compileProvider',
+    'ruiFlairDirectiveDefinition',
+    function ($compileProvider, ruiFlairDirectiveDefinition) {
+      var name, _i, _len, _ref, _results;
+      _ref = [
+        'ruiFlaire',
+        'ruiFlair'
+      ];
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        name = _ref[_i];
+        _results.push($compileProvider.directive(name, function () {
+          return ruiFlairDirectiveDefinition;
+        }));
+      }
+      return _results;
+    }
+  ]);
+}.call(this));
+(function () {
+  angular.module('rui.flair', [
+    'rui.flair.services',
+    'rui.flair.directives'
+  ]);
+}.call(this));
+(function () {
+  var RuiFlair, module, __bind = function (fn, me) {
+      return function () {
+        return fn.apply(me, arguments);
+      };
+    }, __slice = [].slice;
+  angular.module('rui.flair.services', ['rui.flair.services.flair']);
+  module = angular.module('rui.flair.services.flair', [
+    'rui.flair.services.flair',
+    'rui.util.lodash'
+  ]);
+  module.factory('$ruiFlaire', [
+    '$ruiFlair',
+    function ($ruiFlair) {
+      return $ruiFlair;
+    }
+  ]);
+  /**
+  * @constant {object} $ruiFlairDefaults A config time constant that your app can modify to supply defaults to $ruiFLair. Most common would be default 'appendTo', 'prependTo' selectors.
+  * @config {string|HTMLElement|jQuery} [appendTo='body'] Optional target for appending flairs. Can be a dom node or jquery selector.
+  * @config {string|HTMLElement|jQuery} [prependTo='body'] Optional target for prepending flairs. Can be a dom node or jquery selector.
+  * @config {boolean} [prepend] Whether the flair should append or prepend to the target. Provided as a quick shortcut for {prependTo: 'body'}. Will always be true if value of 'prependTo' is defiend.
+  */
+  module.constant('$ruiFlairDefaults', {
+    appendTo: 'body',
+    prependTo: null,
+    prepend: false,
+    'class': 'attention'
+  });
+  /**
+  * @class $ruiFlair
+  * @classdesc Service for creating rui flairs. Similar to angular bootstrap's $modal.
+  */
+  module.service('$ruiFlair', RuiFlair = function () {
+    function RuiFlair($ruiFlairDefaults, $http, $templateCache, $rootScope, $q, $controller, $timeout, $compile) {
+      this.$ruiFlairDefaults = $ruiFlairDefaults;
+      this.$http = $http;
+      this.$templateCache = $templateCache;
+      this.$rootScope = $rootScope;
+      this.$q = $q;
+      this.$controller = $controller;
+      this.$timeout = $timeout;
+      this.$compile = $compile;
+      this._getResolvePromises = __bind(this._getResolvePromises, this);
+      this._getTemplatePromise = __bind(this._getTemplatePromise, this);
+      this._createInstance = __bind(this._createInstance, this);
+      this._openInstance = __bind(this._openInstance, this);
+      this._options = __bind(this._options, this);
+      this.open = __bind(this.open, this);
+      this.defaults = this.$ruiFlairDefaults;
+    }
+    /** 
+    		* @param {object} options 
+    		* @config {$scope} [scope=$rootScope] The scope to create a child from for the flair.
+    		* @config {string|HTMLElement|jQuery} [appendTo='body'] Optional target for appending flairs. Can be a dom node or jquery selector.
+    		* @config {string|HTMLElement|jQuery} [prependTo='body'] Optional target for prepending flairs. Can be a dom node or jquery selector.
+    		* @config {boolean} [prepend] Whether the flair should append or prepend to the target. Provided as a quick shortcut for {prependTo: 'body'}. Will always be true if value of 'prependTo' is defiend.
+    		* @config {string|Array} [class='attention'] Optional set of classes to append to flair. If string, should be space delimeted. Defaults to 'attention' for messaging purposes.
+    		* @config {string} [controller] Optional controller to be used for the flair.
+    		* @config {string} [controllerAs] Optionally specify 'controller as' syntax to place the controller as a var on the scope.		
+    		* @config {string} [template] The flair content template.
+    		* @config {string} [templateUrl] A templateUrl for the flair content.
+    		* @config {string} [flairTemplateUrl] An optional url to override/redefine the entire flaire directive's template. This includes the frame, buttons, etc; not just the content.
+    */
+    RuiFlair.prototype.open = function (options) {
+      var flairInstance, flairOpenDeferred, flairResultDeferred, scope, _ref, _this = this;
+      options = this._options(options);
+      scope = options.scope.$new();
+      _ref = this._createInstance(scope), flairOpenDeferred = _ref[0], flairResultDeferred = _ref[1], flairInstance = _ref[2];
+      scope.$close = flairInstance.close;
+      scope.$dismiss = flairInstance.dismiss;
+      scope.$flairInstance = flairInstance;
+      this.$q.all([this._getTemplatePromise(options)].concat(this._getResolvePromises(options.resolve))).then(function (_arg) {
+        var ctrlInstance, ctrlLocals, key, resolveIter, resolves, template, value, _ref1;
+        template = _arg[0], resolves = 2 <= _arg.length ? __slice.call(_arg, 1) : [];
+        if (options.controller) {
+          ctrlLocals = { $scope: scope };
+          resolveIter = 0;
+          _ref1 = options.resolves;
+          for (key in _ref1) {
+            value = _ref1[key];
+            ctrlLocals[key] = resolves[resolveIter];
+            resolveIter += 1;
+          }
+          ctrlInstance = _this.$controller(options.controller, ctrlLocals);
+        }
+        return _this._openInstance(flairInstance, {
+          scope: scope,
+          content: template,
+          target: options.prependTo ? options.prependTo : options.appendTo,
+          method: options.prepend ? 'prepend' : 'append',
+          flairTemplateUrl: options.flairTemplateUrl,
+          'class': options['class']
+        });
+      }).then(function () {
+        return flairOpenDeferred.resolve(true);
+      })['catch'](function (error) {
+        flairResultDeferred.reject(error);
+        return flairOpenDeferred.reject(false);
+      });
+      return flairInstance;
+    };
+    RuiFlair.prototype._options = function (options) {
+      options = _.defaults(options, this.defaults);
+      if (_.isArray(options['class'])) {
+        options['class'] = options['class'].join(' ');
+      }
+      if (options.prepend) {
+        if (options.prependTo == null) {
+          options.prependTo = 'body';
+        }
+      }
+      if (options.prependTo) {
+        options.prepend = true;
+      }
+      if (options.scope == null) {
+        options.scope = this.$rootScope;
+      }
+      return options;
+    };
+    RuiFlair.prototype._element = function () {
+      var args;
+      args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+      return angular.element.apply(angular, args);
+    };
+    RuiFlair.prototype._openInstance = function (flairInstance, options) {
+      var $element, attributes, element, target;
+      target = this._element(options.target);
+      element = this._element('<div></div>');
+      attributes = { 'rui-flair': '' };
+      if (options.flairTemplateUrl) {
+        attributes['flair-template-url'] = options.flairTemplateUrl;
+      }
+      element.attr(attributes);
+      element.addClass(options['class']);
+      element.html(options.content);
+      $element = this.$compile(element)(options.scope);
+      flairInstance.$element = $element;
+      return target[options.method]($element);
+    };
+    RuiFlair.prototype._createInstance = function (scope) {
+      var flairInstance, flairOpenDeferred, flairResultDeferred, _this = this;
+      flairOpenDeferred = this.$q.defer();
+      flairResultDeferred = this.$q.defer();
+      flairInstance = {
+        $scope: scope,
+        $destroy: function () {
+          return _this.$timeout(function () {
+            flairInstance.$scope.$destroy();
+            return flairInstance.$element.remove();
+          });
+        },
+        result: flairResultDeferred.promise,
+        opened: flairOpenDeferred.promise,
+        close: function (result) {
+          flairResultDeferred.resolve(result);
+          return flairInstance.$destroy();
+        },
+        dismiss: function (reason) {
+          flairResultDeferred.reject(reason);
+          return flairInstance.$destroy();
+        }
+      };
+      return [
+        flairOpenDeferred,
+        flairResultDeferred,
+        flairInstance
+      ];
+    };
+    RuiFlair.prototype._getTemplatePromise = function (options) {
+      var url;
+      if (options.template) {
+        return this.$q.when(options.template);
+      }
+      url = options.templateUrl;
+      if (_.isFunction(url)) {
+        url = url();
+      }
+      return this.$http.get(url, { cache: this.$templateCache }).then(function (result) {
+        return result.data;
+      });
+    };
+    RuiFlair.prototype._getResolvePromises = function (resolves) {
+      var promises;
+      promises = [];
+      _.each(resolves, function (value) {
+        if (_.isFunction(value) || _.isArray(value)) {
+          return promises.push(this.$q.when(this.$injector.invoke(value)));
+        }
+      });
+      return promises;
+    };
+    return RuiFlair;
+  }());
+}.call(this));
+(function () {
   angular.module('rui.forms', [
     'rui.forms.input',
     'rui.forms.select'
@@ -2532,7 +2777,8 @@
     'rui.scroll',
     'rui.forms',
     'rui.tree',
-    'rui.alm'
+    'rui.alm',
+    'rui.flair'
   ]);
 }.call(this));
 (function () {
@@ -5079,6 +5325,11 @@ angular.module('rui.templates').run(['$templateCache', function($templateCache) 
 
   $templateCache.put('rui/dropdown/templates/dropdown.html',
     "<div ng-class=\"{open: $dropdown.isOpen}\" class=dropdown-container><div ng-click=$dropdown.toggleOpen() class=\"field dropdown\"><span class=rui-dropdown-label-container></span><span ng-click=$dropdown.toggle() class=\"icons icon-chevron-down\"></span></div></div>"
+  );
+
+
+  $templateCache.put('rui/flair/templates/flair.html',
+    "<div class=\"flaire flair\"><div class=content><div ng-transclude=\"\" class=message></div><div ng-click=$dismiss($event) class=cancel><i class=icon-cancel></i></div></div></div>"
   );
 
 

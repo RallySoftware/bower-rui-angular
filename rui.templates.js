@@ -36,6 +36,11 @@ angular.module('rui.templates').run(['$templateCache', function($templateCache) 
   );
 
 
+  $templateCache.put('rui/flair/templates/flair.html',
+    "<div class=\"flaire flair\"><div class=content><div ng-transclude=\"\" class=message></div><div ng-click=$dismiss($event) class=cancel><i class=icon-cancel></i></div></div></div>"
+  );
+
+
   $templateCache.put('rui/forms/input/number/templates/number.html',
     "<div class=rui-input-number><div ng-transclude=\"\" class=rui-input-number-container></div><div class=rui-input-number-spin-btn-container><div ng-click=$inputNumber.step(1) class=\"rui-input-number-spin-btn rui-input-number-spin-btn-up icon-full-arrow-up\"></div><div ng-click=$inputNumber.step(-1) class=\"rui-input-number-spin-btn rui-input-number-spin-btn-down icon-full-arrow-down\"></div></div></div>"
   );
