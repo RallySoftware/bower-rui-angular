@@ -4723,7 +4723,7 @@
   var GraphService,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
-  angular.module('rui.util.graph', []).service('$graph', GraphService = (function() {
+  angular.module('rui.util.graph', []).service('ruiGraphUtil', GraphService = (function() {
     function GraphService() {
       this.flattenDFS = __bind(this.flattenDFS, this);
     }
@@ -4753,7 +4753,13 @@
 
     return GraphService;
 
-  })());
+  })()).provider('$graph', function() {
+    return {
+      $get: function(ruiGraphUtil) {
+        return ruiGraphUtil;
+      }
+    };
+  });
 
 }).call(this);
 
