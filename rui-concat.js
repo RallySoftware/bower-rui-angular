@@ -701,6 +701,7 @@
       _this = this;
     this.appId = null;
     this.beaconUrl = null;
+    this.digestSpan = false;
     handler = {
       getComponentHierarchy: function() {
         return [_this.appId];
@@ -720,6 +721,7 @@
         handlers: [handler]
       });
       aggregator.superTraits = {};
+      aggregator.digestSpan = _this.digestSpan;
       return aggregator;
     };
     return this;
@@ -843,15 +845,19 @@
           if ((_base = this.data).analytics == null) {
             _base.analytics = {};
           }
-          return rallyBeacon.beginLoad({
-            component: zone,
-            description: description
-          });
+          if (rallyBeacon.digestSpan) {
+            return rallyBeacon.beginLoad({
+              component: zone,
+              description: description
+            });
+          }
         },
         afterTask: function() {
-          return rallyBeacon.endLoad({
-            component: zone
-          });
+          if (rallyBeacon.digestSpan) {
+            return rallyBeacon.endLoad({
+              component: zone
+            });
+          }
         }
       };
     };
