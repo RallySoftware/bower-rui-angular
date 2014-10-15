@@ -718,7 +718,8 @@
       aggregator = new RallyMetrics.Aggregator({
         flushInterval: 5000,
         beaconUrl: _this.beaconUrl,
-        handlers: [handler]
+        handlers: [handler],
+        useCors: true
       });
       aggregator.superTraits = {};
       aggregator.digestSpan = _this.digestSpan;
