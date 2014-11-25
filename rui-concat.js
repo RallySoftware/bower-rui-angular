@@ -4165,12 +4165,10 @@
   angular.module('rui.tree.directives.node', ['rui.templates', 'rui.util.template', 'rui.util.timeout', 'rui.tree.controllers.node']).directive('ruiTreeNodeCtrl', function($compile, $log) {
     return {
       scope: true,
-      require: ['ruiTreeNodeCtrl', '^ruiTreeCtrl'],
+      require: 'ruiTreeNodeCtrl',
       controller: 'RuiTreeNodeCtrl',
       priority: 10,
-      link: function($scope, $element, $attrs, _arg) {
-        var controller;
-        controller = _arg[0];
+      link: function($scope, $element, $attrs, controller) {
         $scope.$watch($attrs.ruiTreeNodeRoot, function(node) {
           return $scope.$ruiTreeNode.node = node;
         });

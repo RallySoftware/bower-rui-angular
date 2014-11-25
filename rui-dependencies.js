@@ -18483,7 +18483,7 @@ return $.widget("ui.sortable", $.ui.mouse, {
 }));
 
 /**
- * @license AngularJS v1.2.26
+ * @license AngularJS v1.2.27
  * (c) 2010-2014 Google, Inc. http://angularjs.org
  * License: MIT
  */
@@ -18552,7 +18552,7 @@ function minErr(module) {
       return match;
     });
 
-    message = message + '\nhttp://errors.angularjs.org/1.2.26/' +
+    message = message + '\nhttp://errors.angularjs.org/1.2.27/' +
       (module ? module + '/' : '') + code;
     for (i = 2; i < arguments.length; i++) {
       message = message + (i == 2 ? '?' : '&') + 'p' + (i-2) + '=' +
@@ -20471,11 +20471,11 @@ function setupModuleLoader(window) {
  * - `codeName` – `{string}` – Code name of the release, such as "jiggling-armfat".
  */
 var version = {
-  full: '1.2.26',    // all of these placeholder strings will be replaced by grunt's
+  full: '1.2.27',    // all of these placeholder strings will be replaced by grunt's
   major: 1,    // package task
   minor: 2,
-  dot: 26,
-  codeName: 'captivating-disinterest'
+  dot: 27,
+  codeName: 'prime-factorization'
 };
 
 
@@ -20642,7 +20642,7 @@ function publishExternalAPI(angular){
  * - [`children()`](http://api.jquery.com/children/) - Does not support selectors
  * - [`clone()`](http://api.jquery.com/clone/)
  * - [`contents()`](http://api.jquery.com/contents/)
- * - [`css()`](http://api.jquery.com/css/)
+ * - [`css()`](http://api.jquery.com/css/) - Only retrieves inline-styles, does not call `getComputedStyles()`
  * - [`data()`](http://api.jquery.com/data/)
  * - [`empty()`](http://api.jquery.com/empty/)
  * - [`eq()`](http://api.jquery.com/eq/)
@@ -21686,13 +21686,13 @@ HashMap.prototype = {
  * @kind function
  *
  * @description
- * Creates an injector function that can be used for retrieving services as well as for
+ * Creates an injector object that can be used for retrieving services as well as for
  * dependency injection (see {@link guide/di dependency injection}).
  *
 
  * @param {Array.<string|Function>} modules A list of module functions or their aliases. See
  *        {@link angular.module}. The `ng` module must be explicitly added.
- * @returns {function()} Injector function. See {@link auto.$injector $injector}.
+ * @returns {injector} Injector object. See {@link auto.$injector $injector}.
  *
  * @example
  * Typical usage
@@ -21780,7 +21780,6 @@ function annotate(fn) {
 /**
  * @ngdoc service
  * @name $injector
- * @kind function
  *
  * @description
  *
@@ -21795,7 +21794,7 @@ function annotate(fn) {
  *   expect($injector.get('$injector')).toBe($injector);
  *   expect($injector.invoke(function($injector){
  *     return $injector;
- *   }).toBe($injector);
+ *   })).toBe($injector);
  * ```
  *
  * # Injection Function Annotation
@@ -21862,8 +21861,8 @@ function annotate(fn) {
  * @description
  * Allows the user to query if the particular service exists.
  *
- * @param {string} Name of the service to query.
- * @returns {boolean} returns true if injector has given service.
+ * @param {string} name Name of the service to query.
+ * @returns {boolean} `true` if injector has given service.
  */
 
 /**
@@ -22528,6 +22527,19 @@ function $AnchorScrollProvider() {
 
   var autoScrollingEnabled = true;
 
+  /**
+   * @ngdoc method
+   * @name $anchorScrollProvider#disableAutoScrolling
+   *
+   * @description
+   * By default, {@link ng.$anchorScroll $anchorScroll()} will automatically detect changes to
+   * {@link ng.$location#hash $location.hash()} and scroll to the element matching the new hash.<br />
+   * Use this method to disable automatic scrolling.
+   *
+   * If automatic scrolling is disabled, one must explicitly call
+   * {@link ng.$anchorScroll $anchorScroll()} in order to scroll to the element related to the
+   * current hash.
+   */
   this.disableAutoScrolling = function() {
     autoScrollingEnabled = false;
   };
@@ -22832,6 +22844,8 @@ function $$AsyncCallbackProvider(){
   }];
 }
 
+/* global stripHash: true */
+
 /**
  * ! This is a private undocumented service !
  *
@@ -22956,7 +22970,7 @@ function Browser(window, document, $log, $sniffer) {
 
   var lastBrowserUrl = location.href,
       baseElement = document.find('base'),
-      newLocation = null;
+      reloadLocation = null;
 
   /**
    * @name $browser#url
@@ -22985,8 +22999,13 @@ function Browser(window, document, $log, $sniffer) {
     // setter
     if (url) {
       if (lastBrowserUrl == url) return;
+      var sameBase = lastBrowserUrl && stripHash(lastBrowserUrl) === stripHash(url);
       lastBrowserUrl = url;
-      if ($sniffer.history) {
+      // Don't use history API if only the hash changed
+      // due to a bug in IE10/IE11 which leads
+      // to not firing a `hashchange` nor `popstate` event
+      // in some cases (see #9143).
+      if (!sameBase && $sniffer.history) {
         if (replace) history.replaceState(null, '', url);
         else {
           history.pushState(null, '', url);
@@ -22994,7 +23013,9 @@ function Browser(window, document, $log, $sniffer) {
           baseElement.attr('href', baseElement.attr('href'));
         }
       } else {
-        newLocation = url;
+        if (!sameBase) {
+          reloadLocation = url;
+        }
         if (replace) {
           location.replace(url);
         } else {
@@ -23004,10 +23025,10 @@ function Browser(window, document, $log, $sniffer) {
       return self;
     // getter
     } else {
-      // - newLocation is a workaround for an IE7-9 issue with location.replace and location.href
-      //   methods not updating location.href synchronously.
+      // - reloadLocation is needed as browsers don't allow to read out
+      //   the new location.href if a reload happened.
       // - the replacement is a workaround for https://bugzilla.mozilla.org/show_bug.cgi?id=407172
-      return newLocation || location.href.replace(/%27/g,"'");
+      return reloadLocation || location.href.replace(/%27/g,"'");
     }
   };
 
@@ -23015,7 +23036,6 @@ function Browser(window, document, $log, $sniffer) {
       urlChangeInit = false;
 
   function fireUrlChange() {
-    newLocation = null;
     if (lastBrowserUrl == self.url()) return;
 
     lastBrowserUrl = self.url();
@@ -23591,7 +23611,8 @@ function $CacheFactoryProvider() {
  * ```
  *
  * **Note:** the `script` tag containing the template does not need to be included in the `head` of
- * the document, but it must be below the `ng-app` definition.
+ * the document, but it must be a descendent of the {@link ng.$rootElement $rootElement} (IE,
+ * element with ng-app attribute), otherwise the template will be ignored.
  *
  * Adding via the $templateCache service:
  *
@@ -23876,8 +23897,13 @@ function $TemplateCacheProvider() {
  * scope. This makes it possible for the widget to have private state, and the transclusion to
  * be bound to the parent (pre-`isolate`) scope.
  *
- * * `true` - transclude the content of the directive.
- * * `'element'` - transclude the whole element including any directives defined at lower priority.
+ * There are two kinds of transclusion depending upon whether you want to transclude just the contents of the
+ * directive's element or the entire element:
+ *
+ * * `true` - transclude the content (i.e. the child nodes) of the directive's element.
+ * * `'element'` - transclude the whole of the directive's element including any directives on this
+ *   element that defined at a lower priority than this directive. When used, the `template`
+ *   property is ignored.
  *
  * <div class="alert alert-warning">
  * **Note:** When testing an element transclude directive you must not place the directive at the root of the
@@ -25994,9 +26020,18 @@ function $HttpProvider() {
   };
 
   /**
-   * Are ordered by request, i.e. they are applied in the same order as the
+   * @ngdoc property
+   * @name $httpProvider#interceptors
+   * @description
+   *
+   * Array containing service factories for all synchronous or asynchronous {@link ng.$http $http}
+   * pre-processing of request or postprocessing of responses.
+   *
+   * These service factories are ordered by request, i.e. they are applied in the same order as the
    * array, on request, but reverse order, on response.
-   */
+   *
+   * {@link ng.$http#interceptors Interceptors detailed info}
+   **/
   var interceptorFactories = this.interceptors = [];
 
   /**
@@ -26737,18 +26772,31 @@ function $HttpProvider() {
      * @param {Object=} config Optional configuration object
      * @returns {HttpPromise} Future object
      */
-    createShortMethodsWithData('post', 'put');
 
-        /**
-         * @ngdoc property
-         * @name $http#defaults
-         *
-         * @description
-         * Runtime equivalent of the `$httpProvider.defaults` property. Allows configuration of
-         * default headers, withCredentials as well as request and response transformations.
-         *
-         * See "Setting HTTP Headers" and "Transforming Requests and Responses" sections above.
-         */
+    /**
+     * @ngdoc method
+     * @name $http#patch
+     *
+     * @description
+     * Shortcut method to perform `PATCH` request.
+     *
+     * @param {string} url Relative or absolute URL specifying the destination of the request
+     * @param {*} data Request content
+     * @param {Object=} config Optional configuration object
+     * @returns {HttpPromise} Future object
+     */
+    createShortMethodsWithData('post', 'put', 'patch');
+
+    /**
+     * @ngdoc property
+     * @name $http#defaults
+     *
+     * @description
+     * Runtime equivalent of the `$httpProvider.defaults` property. Allows configuration of
+     * default headers, withCredentials as well as request and response transformations.
+     *
+     * See "Setting HTTP Headers" and "Transforming Requests and Responses" sections above.
+     */
     $http.defaults = defaults;
 
 
@@ -27762,21 +27810,26 @@ function LocationHtml5Url(appBase, basePrefix) {
     this.$$absUrl = appBaseNoFile + this.$$url.substr(1); // first char is always '/'
   };
 
-  this.$$rewrite = function(url) {
+  this.$$parseLinkUrl = function(url, relHref) {
     var appUrl, prevAppUrl;
+    var rewrittenUrl;
 
     if ( (appUrl = beginsWith(appBase, url)) !== undefined ) {
       prevAppUrl = appUrl;
       if ( (appUrl = beginsWith(basePrefix, appUrl)) !== undefined ) {
-        return appBaseNoFile + (beginsWith('/', appUrl) || appUrl);
+        rewrittenUrl = appBaseNoFile + (beginsWith('/', appUrl) || appUrl);
       } else {
-        return appBase + prevAppUrl;
+        rewrittenUrl = appBase + prevAppUrl;
       }
     } else if ( (appUrl = beginsWith(appBaseNoFile, url)) !== undefined ) {
-      return appBaseNoFile + appUrl;
+      rewrittenUrl = appBaseNoFile + appUrl;
     } else if (appBaseNoFile == url + '/') {
-      return appBaseNoFile;
+      rewrittenUrl = appBaseNoFile;
     }
+    if (rewrittenUrl) {
+      this.$$parse(rewrittenUrl);
+    }
+    return !!rewrittenUrl;
   };
 }
 
@@ -27866,10 +27919,12 @@ function LocationHashbangUrl(appBase, hashPrefix) {
     this.$$absUrl = appBase + (this.$$url ? hashPrefix + this.$$url : '');
   };
 
-  this.$$rewrite = function(url) {
+  this.$$parseLinkUrl = function(url, relHref) {
     if(stripHash(appBase) == stripHash(url)) {
-      return url;
+      this.$$parse(url);
+      return true;
     }
+    return false;
   };
 }
 
@@ -27889,16 +27944,21 @@ function LocationHashbangInHtml5Url(appBase, hashPrefix) {
 
   var appBaseNoFile = stripFile(appBase);
 
-  this.$$rewrite = function(url) {
+  this.$$parseLinkUrl = function(url, relHref) {
+    var rewrittenUrl;
     var appUrl;
 
     if ( appBase == stripHash(url) ) {
-      return url;
+      rewrittenUrl = url;
     } else if ( (appUrl = beginsWith(appBaseNoFile, url)) ) {
-      return appBase + hashPrefix + appUrl;
+      rewrittenUrl = appBase + hashPrefix + appUrl;
     } else if ( appBaseNoFile === url + '/') {
-      return appBaseNoFile;
+      rewrittenUrl = appBaseNoFile;
     }
+    if (rewrittenUrl) {
+      this.$$parse(rewrittenUrl);
+    }
+    return !!rewrittenUrl;
   };
 
   this.$$compose = function() {
@@ -28026,7 +28086,7 @@ LocationHashbangInHtml5Url.prototype =
    * @return {string} path
    */
   path: locationGetterSetter('$$path', function(path) {
-    path = path ? path.toString() : '';
+    path = path !== null ? path.toString() : '';
     return path.charAt(0) == '/' ? path : '/' + path;
   }),
 
@@ -28123,7 +28183,7 @@ LocationHashbangInHtml5Url.prototype =
    * @return {string} hash
    */
   hash: locationGetterSetter('$$hash', function(hash) {
-    return hash ? hash.toString() : '';
+    return hash !== null ? hash.toString() : '';
   }),
 
   /**
@@ -28271,7 +28331,7 @@ function $LocationProvider(){
       LocationMode = LocationHashbangUrl;
     }
     $location = new LocationMode(appBase, '#' + hashPrefix);
-    $location.$$parse($location.$$rewrite(initialUrl));
+    $location.$$parseLinkUrl(initialUrl, initialUrl);
 
     var IGNORE_URI_REGEXP = /^\s*(javascript|mailto):/i;
 
@@ -28290,6 +28350,9 @@ function $LocationProvider(){
       }
 
       var absHref = elm.prop('href');
+      // get the actual href attribute - see
+      // http://msdn.microsoft.com/en-us/library/ie/dd347148(v=vs.85).aspx
+      var relHref = elm.attr('href') || elm.attr('xlink:href');
 
       if (isObject(absHref) && absHref.toString() === '[object SVGAnimatedString]') {
         // SVGAnimatedString.animVal should be identical to SVGAnimatedString.baseVal, unless during
@@ -28300,50 +28363,18 @@ function $LocationProvider(){
       // Ignore when url is started with javascript: or mailto:
       if (IGNORE_URI_REGEXP.test(absHref)) return;
 
-      // Make relative links work in HTML5 mode for legacy browsers (or at least IE8 & 9)
-      // The href should be a regular url e.g. /link/somewhere or link/somewhere or ../somewhere or
-      // somewhere#anchor or http://example.com/somewhere
-      if (LocationMode === LocationHashbangInHtml5Url) {
-        // get the actual href attribute - see
-        // http://msdn.microsoft.com/en-us/library/ie/dd347148(v=vs.85).aspx
-        var href = elm.attr('href') || elm.attr('xlink:href');
-
-        if (href && href.indexOf('://') < 0) {         // Ignore absolute URLs
-          var prefix = '#' + hashPrefix;
-          if (href[0] == '/') {
-            // absolute path - replace old path
-            absHref = appBase + prefix + href;
-          } else if (href[0] == '#') {
-            // local anchor
-            absHref = appBase + prefix + ($location.path() || '/') + href;
-          } else {
-            // relative path - join with current path
-            var stack = $location.path().split("/"),
-              parts = href.split("/");
-            if (stack.length === 2 && !stack[1]) stack.length = 1;
-            for (var i=0; i<parts.length; i++) {
-              if (parts[i] == ".")
-                continue;
-              else if (parts[i] == "..")
-                stack.pop();
-              else if (parts[i].length)
-                stack.push(parts[i]);
-            }
-            absHref = appBase + prefix + stack.join('/');
-          }
-        }
-      }
-
-      var rewrittenUrl = $location.$$rewrite(absHref);
-
-      if (absHref && !elm.attr('target') && rewrittenUrl && !event.isDefaultPrevented()) {
-        event.preventDefault();
-        if (rewrittenUrl != $browser.url()) {
+      if (absHref && !elm.attr('target') && !event.isDefaultPrevented()) {
+        if ($location.$$parseLinkUrl(absHref, relHref)) {
+          // We do a preventDefault for all urls that are part of the angular application,
+          // in html5mode and also without, so that we are able to abort navigation without
+          // getting double entries in the location history.
+          event.preventDefault();
           // update location manually
-          $location.$$parse(rewrittenUrl);
-          $rootScope.$apply();
-          // hack to work around FF6 bug 684208 when scenario runner clicks on links
-          window.angular['ff-684208-preventDefault'] = true;
+          if ($location.absUrl() != $browser.url()) {
+            $rootScope.$apply();
+            // hack to work around FF6 bug 684208 when scenario runner clicks on links
+            window.angular['ff-684208-preventDefault'] = true;
+          }
         }
       }
     });
@@ -28573,7 +28604,7 @@ var promiseWarning;
 // Sandboxing Angular Expressions
 // ------------------------------
 // Angular expressions are generally considered safe because these expressions only have direct
-// access to $scope and locals. However, one can obtain the ability to execute arbitrary JS code by
+// access to `$scope` and locals. However, one can obtain the ability to execute arbitrary JS code by
 // obtaining a reference to native JS functions such as the Function constructor.
 //
 // As an example, consider the following Angular expression:
@@ -28582,7 +28613,7 @@ var promiseWarning;
 //
 // This sandboxing technique is not perfect and doesn't aim to be. The goal is to prevent exploits
 // against the expression language, but not to prevent exploits that were enabled by exposing
-// sensitive JavaScript or browser apis on Scope. Exposing such objects on a Scope is never a good
+// sensitive JavaScript or browser APIs on Scope. Exposing such objects on a Scope is never a good
 // practice and therefore we are not even trying to protect against interaction with an object
 // explicitly exposed in this way.
 //
@@ -28590,6 +28621,8 @@ var promiseWarning;
 // window or some DOM object that has a reference to window is published onto a Scope.
 // Similarly we prevent invocations of function known to be dangerous, as well as assignments to
 // native objects.
+//
+// See https://docs.angularjs.org/guide/security
 
 
 function ensureSafeMemberName(name, fullExpression) {
@@ -29440,7 +29473,12 @@ function setter(obj, path, setValue, fullExp, options) {
   return setValue;
 }
 
-var getterFnCache = {};
+var getterFnCacheDefault = {};
+var getterFnCacheExpensive = {};
+
+function isPossiblyDangerousMemberName(name) {
+  return name == 'constructor';
+}
 
 /**
  * Implementation of the "Black Hole" variant from:
@@ -29453,29 +29491,38 @@ function cspSafeGetterFn(key0, key1, key2, key3, key4, fullExp, options) {
   ensureSafeMemberName(key2, fullExp);
   ensureSafeMemberName(key3, fullExp);
   ensureSafeMemberName(key4, fullExp);
+  var eso = function(o) {
+    return ensureSafeObject(o, fullExp);
+  };
+  var expensiveChecks = options.expensiveChecks;
+  var eso0 = (expensiveChecks || isPossiblyDangerousMemberName(key0)) ? eso : identity;
+  var eso1 = (expensiveChecks || isPossiblyDangerousMemberName(key1)) ? eso : identity;
+  var eso2 = (expensiveChecks || isPossiblyDangerousMemberName(key2)) ? eso : identity;
+  var eso3 = (expensiveChecks || isPossiblyDangerousMemberName(key3)) ? eso : identity;
+  var eso4 = (expensiveChecks || isPossiblyDangerousMemberName(key4)) ? eso : identity;
 
   return !options.unwrapPromises
       ? function cspSafeGetter(scope, locals) {
           var pathVal = (locals && locals.hasOwnProperty(key0)) ? locals : scope;
 
           if (pathVal == null) return pathVal;
-          pathVal = pathVal[key0];
+          pathVal = eso0(pathVal[key0]);
 
           if (!key1) return pathVal;
           if (pathVal == null) return undefined;
-          pathVal = pathVal[key1];
+          pathVal = eso1(pathVal[key1]);
 
           if (!key2) return pathVal;
           if (pathVal == null) return undefined;
-          pathVal = pathVal[key2];
+          pathVal = eso2(pathVal[key2]);
 
           if (!key3) return pathVal;
           if (pathVal == null) return undefined;
-          pathVal = pathVal[key3];
+          pathVal = eso3(pathVal[key3]);
 
           if (!key4) return pathVal;
           if (pathVal == null) return undefined;
-          pathVal = pathVal[key4];
+          pathVal = eso4(pathVal[key4]);
 
           return pathVal;
         }
@@ -29485,73 +29532,81 @@ function cspSafeGetterFn(key0, key1, key2, key3, key4, fullExp, options) {
 
           if (pathVal == null) return pathVal;
 
-          pathVal = pathVal[key0];
+          pathVal = eso0(pathVal[key0]);
           if (pathVal && pathVal.then) {
             promiseWarning(fullExp);
             if (!("$$v" in pathVal)) {
               promise = pathVal;
               promise.$$v = undefined;
-              promise.then(function(val) { promise.$$v = val; });
+              promise.then(function(val) { promise.$$v = eso0(val); });
             }
-            pathVal = pathVal.$$v;
+            pathVal = eso0(pathVal.$$v);
           }
 
           if (!key1) return pathVal;
           if (pathVal == null) return undefined;
-          pathVal = pathVal[key1];
+          pathVal = eso1(pathVal[key1]);
           if (pathVal && pathVal.then) {
             promiseWarning(fullExp);
             if (!("$$v" in pathVal)) {
               promise = pathVal;
               promise.$$v = undefined;
-              promise.then(function(val) { promise.$$v = val; });
+              promise.then(function(val) { promise.$$v = eso1(val); });
             }
-            pathVal = pathVal.$$v;
+            pathVal = eso1(pathVal.$$v);
           }
 
           if (!key2) return pathVal;
           if (pathVal == null) return undefined;
-          pathVal = pathVal[key2];
+          pathVal = eso2(pathVal[key2]);
           if (pathVal && pathVal.then) {
             promiseWarning(fullExp);
             if (!("$$v" in pathVal)) {
               promise = pathVal;
               promise.$$v = undefined;
-              promise.then(function(val) { promise.$$v = val; });
+              promise.then(function(val) { promise.$$v = eso2(val); });
             }
-            pathVal = pathVal.$$v;
+            pathVal = eso2(pathVal.$$v);
           }
 
           if (!key3) return pathVal;
           if (pathVal == null) return undefined;
-          pathVal = pathVal[key3];
+          pathVal = eso3(pathVal[key3]);
           if (pathVal && pathVal.then) {
             promiseWarning(fullExp);
             if (!("$$v" in pathVal)) {
               promise = pathVal;
               promise.$$v = undefined;
-              promise.then(function(val) { promise.$$v = val; });
+              promise.then(function(val) { promise.$$v = eso3(val); });
             }
-            pathVal = pathVal.$$v;
+            pathVal = eso3(pathVal.$$v);
           }
 
           if (!key4) return pathVal;
           if (pathVal == null) return undefined;
-          pathVal = pathVal[key4];
+          pathVal = eso4(pathVal[key4]);
           if (pathVal && pathVal.then) {
             promiseWarning(fullExp);
             if (!("$$v" in pathVal)) {
               promise = pathVal;
               promise.$$v = undefined;
-              promise.then(function(val) { promise.$$v = val; });
+              promise.then(function(val) { promise.$$v = eso4(val); });
             }
-            pathVal = pathVal.$$v;
+            pathVal = eso4(pathVal.$$v);
           }
           return pathVal;
         };
 }
 
+function getterFnWithExtraArgs(fn, fullExpression) {
+  return function(s, l) {
+    return fn(s, l, promiseWarning, ensureSafeObject, fullExpression);
+  };
+}
+
 function getterFn(path, options, fullExp) {
+  var expensiveChecks = options.expensiveChecks;
+  var getterFnCache = (expensiveChecks ? getterFnCacheExpensive : getterFnCacheDefault);
   // Check whether the cache has this getter already.
   // We can use hasOwnProperty directly on the cache because we ensure,
   // see below, that the cache never stores a path called 'hasOwnProperty'
@@ -29583,35 +29638,48 @@ function getterFn(path, options, fullExp) {
     }
   } else {
     var code = 'var p;\n';
+    if (expensiveChecks) {
+      code += 's = eso(s, fe);\nl = eso(l, fe);\n';
+    }
+    var needsEnsureSafeObject = expensiveChecks;
     forEach(pathKeys, function(key, index) {
       ensureSafeMemberName(key, fullExp);
-      code += 'if(s == null) return undefined;\n' +
-              's='+ (index
+      var lookupJs = (index
                       // we simply dereference 's' on any .dot notation
                       ? 's'
                       // but if we are first then we check locals first, and if so read it first
-                      : '((k&&k.hasOwnProperty("' + key + '"))?k:s)') + '["' + key + '"]' + ';\n' +
-              (options.unwrapPromises
-                ? 'if (s && s.then) {\n' +
+                      : '((l&&l.hasOwnProperty("' + key + '"))?l:s)') + '["' + key + '"]';
+      var wrapWithEso = expensiveChecks || isPossiblyDangerousMemberName(key);
+      if (wrapWithEso) {
+        lookupJs = 'eso(' + lookupJs + ', fe)';
+        needsEnsureSafeObject = true;
+      }
+      code += 'if(s == null) return undefined;\n' +
+              's=' + lookupJs + ';\n';
+      if (options.unwrapPromises) {
+        code += 'if (s && s.then) {\n' +
                   ' pw("' + fullExp.replace(/(["\r\n])/g, '\\$1') + '");\n' +
                   ' if (!("$$v" in s)) {\n' +
                     ' p=s;\n' +
                     ' p.$$v = undefined;\n' +
-                    ' p.then(function(v) {p.$$v=v;});\n' +
+                    ' p.then(function(v) {p.$$v=' + (wrapWithEso ? 'eso(v)' : 'v') + ';});\n' +
                     '}\n' +
-                  ' s=s.$$v\n' +
-                '}\n'
-                : '');
+                  ' s=' + (wrapWithEso ? 'eso(s.$$v)' : 's.$$v') + '\n' +
+                '}\n';
+
+      }
     });
     code += 'return s;';
 
     /* jshint -W054 */
-    var evaledFnGetter = new Function('s', 'k', 'pw', code); // s=scope, k=locals, pw=promiseWarning
+    // s=scope, l=locals, pw=promiseWarning, eso=ensureSafeObject, fe=fullExpression
+    var evaledFnGetter = new Function('s', 'l', 'pw', 'eso', 'fe', code);
     /* jshint +W054 */
     evaledFnGetter.toString = valueFn(code);
-    fn = options.unwrapPromises ? function(scope, locals) {
-      return evaledFnGetter(scope, locals, promiseWarning);
-    } : evaledFnGetter;
+    if (needsEnsureSafeObject || options.unwrapPromises) {
+      evaledFnGetter = getterFnWithExtraArgs(evaledFnGetter, fullExp);
+    }
+    fn = evaledFnGetter;
   }
 
   // Only cache the value if it's not going to mess up the cache object
@@ -29675,12 +29743,14 @@ function getterFn(path, options, fullExp) {
  *  service.
  */
 function $ParseProvider() {
-  var cache = {};
+  var cacheDefault = {};
+  var cacheExpensive = {};
 
   var $parseOptions = {
     csp: false,
     unwrapPromises: false,
-    logPromiseWarnings: true
+    logPromiseWarnings: true,
+    expensiveChecks: false
   };
 
 
@@ -29767,6 +29837,12 @@ function $ParseProvider() {
 
   this.$get = ['$filter', '$sniffer', '$log', function($filter, $sniffer, $log) {
     $parseOptions.csp = $sniffer.csp;
+    var $parseOptionsExpensive = {
+      csp: $parseOptions.csp,
+      unwrapPromises: $parseOptions.unwrapPromises,
+      logPromiseWarnings: $parseOptions.logPromiseWarnings,
+      expensiveChecks: true
+    };
 
     promiseWarning = function promiseWarningFn(fullExp) {
       if (!$parseOptions.logPromiseWarnings || promiseWarningCache.hasOwnProperty(fullExp)) return;
@@ -29775,18 +29851,20 @@ function $ParseProvider() {
           'Automatic unwrapping of promises in Angular expressions is deprecated.');
     };
 
-    return function(exp) {
+    return function(exp, expensiveChecks) {
       var parsedExpression;
 
       switch (typeof exp) {
         case 'string':
 
+          var cache = (expensiveChecks ? cacheExpensive : cacheDefault);
           if (cache.hasOwnProperty(exp)) {
             return cache[exp];
           }
 
-          var lexer = new Lexer($parseOptions);
-          var parser = new Parser(lexer, $filter, $parseOptions);
+          var parseOptions = expensiveChecks ? $parseOptionsExpensive : $parseOptions;
+          var lexer = new Lexer(parseOptions);
+          var parser = new Parser(lexer, $filter, parseOptions);
           parsedExpression = parser.parse(exp);
 
           if (exp !== 'hasOwnProperty') {
@@ -29813,7 +29891,11 @@ function $ParseProvider() {
  * @requires $rootScope
  *
  * @description
- * A promise/deferred implementation inspired by [Kris Kowal's Q](https://github.com/kriskowal/q).
+ * A service that helps you run functions asynchronously, and use their return values (or exceptions)
+ * when they are done processing.
+ *
+ * This is an implementation of promises/deferred objects inspired by
+ * [Kris Kowal's Q](https://github.com/kriskowal/q).
  *
  * [The CommonJS Promise proposal](http://wiki.commonjs.org/wiki/Promises) describes a promise as an
  * interface for interacting with an object that represents the result of an action that is
@@ -29906,6 +29988,10 @@ function $ParseProvider() {
  *   method.
  *
  * - `catch(errorCallback)` – shorthand for `promise.then(null, errorCallback)`
+ *
+ *   Because `catch` is a reserved word in JavaScript and reserved keywords are not supported as
+ *   property names by ES3, you'll need to invoke the method like `promise['catch'](callback)` or
+ *  `promise.then(null, errorCallback)` to make your code IE8 and Android 2.x compatible.
  *
  * - `finally(callback)` – allows you to observe either the fulfillment or rejection of a promise,
  *   but to do so without modifying the final value. This is useful to release resources or do some
@@ -31338,8 +31424,11 @@ function $RootScopeProvider(){
 
         var self = this;
         return function() {
-          namedListeners[indexOf(namedListeners, listener)] = null;
-          decrementListenerCount(self, 1, name);
+          var indexOfListener = indexOf(namedListeners, listener);
+          if (indexOfListener !== -1) {
+            namedListeners[indexOfListener] = null;
+            decrementListenerCount(self, 1, name);
+          }
         };
       },
 
@@ -33280,17 +33369,17 @@ function filterFilter() {
     }
 
     var search = function(obj, text){
-      if (typeof text == 'string' && text.charAt(0) === '!') {
+      if (typeof text === 'string' && text.charAt(0) === '!') {
         return !search(obj, text.substr(1));
       }
       switch (typeof obj) {
-        case "boolean":
-        case "number":
-        case "string":
+        case 'boolean':
+        case 'number':
+        case 'string':
           return comparator(obj, text);
-        case "object":
+        case 'object':
           switch (typeof text) {
-            case "object":
+            case 'object':
               return comparator(obj, text);
             default:
               for ( var objKey in obj) {
@@ -33301,7 +33390,7 @@ function filterFilter() {
               break;
           }
           return false;
-        case "array":
+        case 'array':
           for ( var i = 0; i < obj.length; i++) {
             if (search(obj[i], text)) {
               return true;
@@ -33313,13 +33402,13 @@ function filterFilter() {
       }
     };
     switch (typeof expression) {
-      case "boolean":
-      case "number":
-      case "string":
+      case 'boolean':
+      case 'number':
+      case 'string':
         // Set up expression object and fall through
         expression = {$:expression};
         // jshint -W086
-      case "object":
+      case 'object':
         // jshint +W086
         for (var key in expression) {
           (function(path) {
@@ -33965,7 +34054,7 @@ function limitToFilter(){
  * correctly, make sure they are actually being saved as numbers and not strings.
  *
  * @param {Array} array The array to sort.
- * @param {function(*)|string|Array.<(function(*)|string)>} expression A predicate to be
+ * @param {function(*)|string|Array.<(function(*)|string)>=} expression A predicate to be
  *    used by the comparator to determine the order of elements.
  *
  *    Can be one of:
@@ -33978,9 +34067,12 @@ function limitToFilter(){
  *      is interpreted as a property name to be used in comparisons (for example `"special name"`
  *      to sort object by the value of their `special name` property). An expression can be
  *      optionally prefixed with `+` or `-` to control ascending or descending sort order
- *      (for example, `+name` or `-name`).
+ *      (for example, `+name` or `-name`). If no property is provided, (e.g. `'+'`) then the array
+ *      element itself is used to compare where sorting.
  *    - `Array`: An array of function or string predicates. The first predicate in the array
  *      is used for sorting, but when two items are equivalent, the next predicate is used.
+ *
+ *    If the predicate is missing or empty then it defaults to `'+'`.
  *
  * @param {boolean=} reverse Reverse the order of the array.
  * @returns {Array} Sorted copy of the source array.
@@ -34070,14 +34162,20 @@ orderByFilter.$inject = ['$parse'];
 function orderByFilter($parse){
   return function(array, sortPredicate, reverseOrder) {
     if (!(isArrayLike(array))) return array;
-    if (!sortPredicate) return array;
     sortPredicate = isArray(sortPredicate) ? sortPredicate: [sortPredicate];
+    if (sortPredicate.length === 0) { sortPredicate = ['+']; }
     sortPredicate = map(sortPredicate, function(predicate){
       var descending = false, get = predicate || identity;
       if (isString(predicate)) {
         if ((predicate.charAt(0) == '+' || predicate.charAt(0) == '-')) {
           descending = predicate.charAt(0) == '-';
           predicate = predicate.substring(1);
+        }
+        if ( predicate === '' ) {
+          // Effectively no predicate was passed so we compare identity
+          return reverseComparator(function(a,b) {
+            return compare(a, b);
+          }, descending);
         }
         get = $parse(predicate);
         if (get.constant) {
@@ -34091,9 +34189,7 @@ function orderByFilter($parse){
         return compare(get(a),get(b));
       }, descending);
     });
-    var arrayCopy = [];
-    for ( var i = 0; i < array.length; i++) { arrayCopy.push(array[i]); }
-    return arrayCopy.sort(reverseComparator(comparator, reverseOrder));
+    return slice.call(array).sort(reverseComparator(comparator, reverseOrder));
 
     function comparator(o1, o2){
       for ( var i = 0; i < sortPredicate.length; i++) {
@@ -35982,7 +36078,7 @@ var VALID_CLASS = 'ng-valid',
  *
  * We are using the {@link ng.service:$sce $sce} service here and include the {@link ngSanitize $sanitize}
  * module to automatically remove "bad" content like inline event listener (e.g. `<span onclick="...">`).
- * However, as we are using `$sce` the model can still decide to to provide unsafe content if it marks
+ * However, as we are using `$sce` the model can still decide to provide unsafe content if it marks
  * that content using the `$sce` service.
  *
  * <example name="NgModelController" module="customControl" deps="angular-sanitize.js">
@@ -36014,7 +36110,7 @@ var VALID_CLASS = 'ng-valid',
 
               // Listen for change events to enable binding
               element.on('blur keyup change', function() {
-                scope.$apply(read);
+                scope.$evalAsync(read);
               });
               read(); // initialize
 
@@ -36297,7 +36393,7 @@ var NgModelController = ['$scope', '$exceptionHandler', '$attrs', '$element', '$
  *
  * For best practices on using `ngModel`, see:
  *
- *  - [https://github.com/angular/angular.js/wiki/Understanding-Scopes]
+ *  - [Understanding Scopes](https://github.com/angular/angular.js/wiki/Understanding-Scopes)
  *
  * For basic examples, how to use `ngModel`, see:
  *
@@ -36797,7 +36893,10 @@ var ngBindTemplateDirective = ['$interpolate', function($interpolate) {
  * element in a secure way.  By default, the innerHTML-ed content will be sanitized using the {@link
  * ngSanitize.$sanitize $sanitize} service.  To utilize this functionality, ensure that `$sanitize`
  * is available, for example, by including {@link ngSanitize} in your module's dependencies (not in
- * core Angular.)  You may also bypass sanitization for values you know are safe. To do so, bind to
+ * core Angular). In order to use {@link ngSanitize} in your module's dependencies, you need to
+ * include "angular-sanitize.js" in your application.
+ *
+ * You may also bypass sanitization for values you know are safe. To do so, bind to
  * an explicitly trusted value via {@link ng.$sce#trustAsHtml $sce.trustAsHtml}.  See the example
  * under {@link ng.$sce#Example Strict Contextual Escaping (SCE)}.
  *
@@ -37592,10 +37691,8 @@ var ngControllerDirective = [function() {
    </example>
  */
 /*
- * A directive that allows creation of custom onclick handlers that are defined as angular
- * expressions and are compiled and executed within the current scope.
- *
- * Events that are handled via these handler are always configured not to propagate further.
+ * A collection of directives that allows creation of custom event handlers that are defined as
+ * angular expressions and are compiled and executed within the current scope.
  */
 var ngEventDirectives = {};
 
@@ -37613,7 +37710,11 @@ forEach(
     ngEventDirectives[directiveName] = ['$parse', '$rootScope', function($parse, $rootScope) {
       return {
         compile: function($element, attr) {
-          var fn = $parse(attr[directiveName]);
+          // We expose the powerful $event object on the scope that provides access to the Window,
+          // etc. that isn't protected by the fast paths in $parse.  We explicitly request better
+          // checks at the cost of speed since event handler expressions are not executed as
+          // frequently as regular change detection.
+          var fn = $parse(attr[directiveName], /* expensiveChecks */ true);
           return function ngEventHandler(scope, element) {
             element.on(eventName, function(event) {
               var callback = function() {
@@ -38059,7 +38160,7 @@ forEach(
  * Note that when an element is removed using `ngIf` its scope is destroyed and a new scope
  * is created when the element is restored.  The scope created within `ngIf` inherits from
  * its parent scope using
- * [prototypal inheritance](https://github.com/angular/angular.js/wiki/The-Nuances-of-Scope-Prototypal-Inheritance).
+ * [prototypal inheritance](https://github.com/angular/angular.js/wiki/Understanding-Scopes#javascript-prototypal-inheritance).
  * An important implication of this is if `ngModel` is used within `ngIf` to bind to
  * a javascript primitive defined in the parent scope. In this case any modifications made to the
  * variable within the child scope will override (hide) the value in the parent scope.
@@ -38073,8 +38174,8 @@ forEach(
  * and `leave` effects.
  *
  * @animations
- * enter - happens just after the ngIf contents change and a new DOM element is created and injected into the ngIf container
- * leave - happens just before the ngIf contents are removed from the DOM
+ * enter - happens just after the `ngIf` contents change and a new DOM element is created and injected into the `ngIf` container
+ * leave - happens just before the `ngIf` contents are removed from the DOM
  *
  * @element ANY
  * @scope
@@ -40374,6 +40475,7 @@ var selectDirective = ['$compile', '$parse', function($compile,   $parse) {
                 lastElement = existingOption.element;
                 if (existingOption.label !== option.label) {
                   lastElement.text(existingOption.label = option.label);
+                  lastElement.prop('label', existingOption.label);
                 }
                 if (existingOption.id !== option.id) {
                   lastElement.val(existingOption.id = option.id);
@@ -40403,6 +40505,7 @@ var selectDirective = ['$compile', '$parse', function($compile,   $parse) {
                       .val(option.id)
                       .prop('selected', option.selected)
                       .attr('selected', option.selected)
+                      .prop('label', option.label)
                       .text(option.label);
                 }
 
@@ -40513,7 +40616,7 @@ var styleDirective = valueFn({
 
 !window.angular.$$csp() && window.angular.element(document).find('head').prepend('<style type="text/css">@charset "UTF-8";[ng\\:cloak],[ng-cloak],[data-ng-cloak],[x-ng-cloak],.ng-cloak,.x-ng-cloak,.ng-hide{display:none !important;}ng\\:form{display:block;}.ng-animate-block-transitions{transition:0s all!important;-webkit-transition:0s all!important;}.ng-hide-add-active,.ng-hide-remove{display:block!important;}</style>');
 /**
- * @license AngularJS v1.2.26
+ * @license AngularJS v1.2.27
  * (c) 2010-2014 Google, Inc. http://angularjs.org
  * License: MIT
  */
