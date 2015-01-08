@@ -1,6 +1,6 @@
 {
   "name": "rui-angular",
-  "version": "0.2.16",
+  "version": "0.2.17",
   "authors": [
     "Patrick Winters <pwinters@rallydev.com>",
     "Nicholas Boll <nicholas.boll@gmail.com>"
@@ -26,7 +26,7 @@
     "async": "~0.7.0",
     "angular-ui-utils": "~0.1.1",
     "angulartics": "RallySoftware/angulartics#0.16.1",
-    "rallymetrics": "git://github.com/RallySoftware/clientmetrics.git#v1.1.1",
+    "rallymetrics": "git://github.com/RallySoftware/clientmetrics.git#v1.2.2",
     "angular-bootstrap": "~0.11.0",
     "rally-style": "git@github.com:/RallySoftware/rally-style.git#v0.2.15"
   },
