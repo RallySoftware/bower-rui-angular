@@ -683,6 +683,8 @@
     var handler, _this = this;
     this.appId = null;
     this.beaconUrl = null;
+    this.userOid = null;
+    this.subscriptionOid = null;
     this.digestSpan = false;
     handler = {
       getComponentHierarchy: function () {
@@ -705,7 +707,10 @@
           handlers: [handler],
           useCors: true
         });
-        aggregator.superTraits = {};
+        aggregator.superTraits = {
+          uId: _this.userOid,
+          sId: _this.subscriptionOid
+        };
         aggregator.digestSpan = _this.digestSpan;
         return aggregator;
       }
